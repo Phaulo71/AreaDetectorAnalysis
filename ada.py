@@ -1,11 +1,21 @@
+#!/usr/bin/env python
+
+"""
+Copyright (c) UChicago Argonne, LLC. All rights reserved.
+See LICENSE file.
+#C In some methods LFit or L refer to the Lattice Constant not RLU
+"""
+# ---------------------------------------------------------------------------------------------------------------------#
+from __future__ import unicode_literals
 import sys
 import os
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 import matplotlib.pylab as plt
+
+# ---------------------------------------------------------------------------------------------------------------------#
 
 class AreaDetectorAnalysisWindow(QMainWindow):
     """Main window class"""
@@ -16,6 +26,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.setMinimumSize(824, 520)
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
+        self.createMenus()
 
         # File list widgets
         self.fileListTitle = QLabel("Image files to load")
@@ -148,6 +159,50 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         hBox_central.addLayout(vBox_right)
 
         self.centralWidget.setLayout(hBox_central)
+
+    def createMenus(self):
+        self.mainMenu = QMenuBar()
+        self.fileMenu = self.mainMenu.addMenu("File")
+        self.optionsMenu = self.mainMenu.addMenu("Options")
+        self.setMenuBar(self.mainMenu)
+
+        self.statusBar = QStatusBar()
+        self.setStatusBar(self.statusBar)
+        self.statusBar.showMessage('Ready', 3000)
+
+        # self.createActions()
+        # self.fileMenu.addAction(self.openImagesAction)
+
+
+    def createActions(self):
+        """Function that creates the actions used in the menu bar
+        """
+        self.openImagesAction = QAction('Open Images', statusTip= 'List up the image files to open.',
+                                  triggered=self.OnOpenImage)
+
+        self.readMetadataAction = QAction('Read Metadata', statusTip='Read a metadata file.',
+                                        triggered=self.OnReadMetaData)
+        self.saveAction = QAction("Save", statusTip="Save the result.",
+                                         triggered=self.OnSave)
+        self.nextAction = QAction("Next", statusTip="Go to the next image.",
+                                         triggered=self.OnNext)
+        self.saveAndNextAction = QAction("Save and Next", statusTip="Save the result and go to the next image.",
+                                         triggered=self.OnSaveNext)
+        self.exitAction = QAction("Exit", statusTip="Exits the program.", triggered=self.OnExit)
+
+    def OnOpenImage(self):
+        print "Not ready, yet."
+
+    def OnReadMetaData(self):
+        print "Not ready, yet."
+
+    def OnSaveNext(self):
+        print "Not ready, yet."
+
+    def OnExit(self):
+        print "Not ready, yet."
+
+
 
 
 
