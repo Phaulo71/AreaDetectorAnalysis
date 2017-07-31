@@ -3,7 +3,6 @@
 """
 Copyright (c) UChicago Argonne, LLC. All rights reserved.
 See LICENSE file.
-#C In some methods LFit or L refer to the Lattice Constant not RLU
 """
 # ---------------------------------------------------------------------------------------------------------------------#
 from __future__ import unicode_literals
@@ -27,6 +26,16 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
         self.createMenus()
+
+        self.filelist = []
+        self.metadatalist = []
+        self.is_metadata_read = False
+        self.imarray = []
+        self.savedatafile = None
+        self.bad_pixels_on = False
+        self.bad_pixels = []
+        self.replacing_pixels = []
+        self.efficiency_on = False
 
         # File list widgets
         self.fileListTitle = QLabel("Image files to load")
@@ -160,50 +169,160 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
         self.centralWidget.setLayout(hBox_central)
 
+        self.fileListBox.itemDoubleClicked.connect(self.OnListSelected)
+        self.removeFileBtn.clicked.connect(self.OnRemoveFile)
+        self.removeAllFileBtn.clicked.connect(self.OnRemoveAllFiles)
+        self.saveAsBtn.clicked.connect(self.OnSaveAs)
+        self.saveBtn.clicked.connect(self.OnSave)
+        self.nextBtn.clicked.connect(self.OnNext)
+        self.saveAndNextBtn.clicked.connect(self.OnSaveNext)
+        self.resetRoiBtn.clicked.connect(self.OnResetDataROI)
+
+
+
     def createMenus(self):
         self.mainMenu = QMenuBar()
         self.fileMenu = self.mainMenu.addMenu("File")
         self.optionsMenu = self.mainMenu.addMenu("Options")
+        self.badPixelsMenu = self.optionsMenu.addMenu("Bad Pixels")
+        self.flatfieldMenu = self.optionsMenu.addMenu("Flatfield Correction")
         self.setMenuBar(self.mainMenu)
 
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
         self.statusBar.showMessage('Ready', 3000)
 
-        # self.createActions()
-        # self.fileMenu.addAction(self.openImagesAction)
+        self.createActions()
+        self.fileMenu.addAction(self.openImagesAction)
+        self.fileMenu.addAction(self.readMetadataAction)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.nextAction)
+        self.fileMenu.addAction(self.saveAction)
+        self.fileMenu.addAction(self.saveAsAction)
+        self.fileMenu.addAction(self.saveAndNextAction)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.exitAction)
+        self.badPixelsMenu.addAction(self.badPixelsOnAction)
+        self.badPixelsMenu.addAction(self.badPixelsOffAction)
+        self.flatfieldMenu.addAction(self.flatfieldOnAction)
+        self.flatfieldMenu.addAction(self.badPixelsOffAction)
+        self.optionsMenu.addAction(self.selectNewDataColumnAction)
 
 
     def createActions(self):
         """Function that creates the actions used in the menu bar
         """
-        self.openImagesAction = QAction('Open Images', statusTip= 'List up the image files to open.',
-                                  triggered=self.OnOpenImage)
+        self.openImagesAction = QAction('Open Images', self)
+        self.openImagesAction.setStatusTip('List up the image files to open.')
+        self.openImagesAction.triggered.connect(self.OnOpenImage)
 
-        self.readMetadataAction = QAction('Read Metadata', statusTip='Read a metadata file.',
-                                        triggered=self.OnReadMetaData)
-        self.saveAction = QAction("Save", statusTip="Save the result.",
-                                         triggered=self.OnSave)
-        self.nextAction = QAction("Next", statusTip="Go to the next image.",
-                                         triggered=self.OnNext)
-        self.saveAndNextAction = QAction("Save and Next", statusTip="Save the result and go to the next image.",
-                                         triggered=self.OnSaveNext)
-        self.exitAction = QAction("Exit", statusTip="Exits the program.", triggered=self.OnExit)
+        self.readMetadataAction = QAction('Read Metadata', self)
+        self.readMetadataAction.setStatusTip('Read a metadata file.')
+        self.readMetadataAction.triggered.connect(self.OnReadMetaData)
+
+        self.saveAsAction = QAction("Save As", self)
+        self.saveAsAction.setStatusTip("Save the result.")
+        self.saveAsAction.triggered.connect(self.OnSaveAs)
+
+        self.saveAction = QAction("Save", self)
+        self.saveAction.setStatusTip("Save the result.")
+        self.saveAction.triggered.connect(self.OnSave)
+
+        self.nextAction = QAction("Next", self)
+        self.nextAction.setStatusTip("Go to the next image.")
+        self.nextAction.triggered.connect(self.OnNext)
+
+        self.saveAndNextAction = QAction("Save and Next", self)
+        self.saveAndNextAction.setStatusTip("Save the result and go to the next image.")
+        self.saveAndNextAction.triggered.connect(self.OnSaveNext)
+
+        self.exitAction = QAction("Exit", self)
+        self.exitAction.setStatusTip("Exits the program.")
+        self.exitAction.triggered.connect(self.OnExit)
+
+        self.badPixelsOnAction = QAction("On", self)
+        self.badPixelsOnAction.setStatusTip("Toggle on, bad pixel correction.")
+        self.badPixelsOnAction.triggered.connect(self.OnBadPixelCorrection)
+
+        self.badPixelsOffAction = QAction("Off", self)
+        self.badPixelsOffAction.setStatusTip("Toggle off, bad pixel correction.")
+        self.badPixelsOffAction.triggered.connect(self.OffBadPixelCorrection)
+
+        self.flatfieldOnAction = QAction("On", self)
+        self.flatfieldOnAction.setStatusTip("Toggle on, pixel by pixel efficiency correction")
+        self.flatfieldOnAction.triggered.connect(self.OnFlatfieldCorrection)
+
+        self.flatfieldOffAction = QAction("On", self)
+        self.flatfieldOffAction.setStatusTip("Toggle off, pixel by pixel efficiency correction")
+        self.flatfieldOffAction.triggered.connect(self.OffFlatfieldCorrection)
+
+        self.selectNewDataColumnAction = QAction("Select New Data Column", self)
+        self.selectNewDataColumnAction.setStatusTip("Select New Data Columns.")
+        self.selectNewDataColumnAction.triggered.connect(self.OnSelectDataColumn)
 
     def OnOpenImage(self):
-        print "Not ready, yet."
+        dir = QFileDialog.getExistingDirectory(caption="Choose directory")
+
+        if os.path.isdir(dir):
+            images = os.listdir(dir)
+
+            for img in images:
+                self.fileListBox.addItem(img)  # wxPython ListBox method
+                if dir.find("/") == 0:
+                    self.filelist.append(dir + '/' + img)
+                elif dir.find("\\") == 0:
+                    self.filelist.append(dir + '\\' + img)
+
+                self.metadatalist.append([])
+
 
     def OnReadMetaData(self):
+        print "Not ready, yet."
+
+    def OnSaveAs(self):
+        print "Not ready, yet."
+
+    def OnSave(self):
+        print "Not ready, yet."
+
+    def OnNext(self):
         print "Not ready, yet."
 
     def OnSaveNext(self):
         print "Not ready, yet."
 
     def OnExit(self):
-        print "Not ready, yet."
+        self.close()
 
+    def OnBadPixelCorrection(self):
+        print "Not ready, yet"
 
+    def OffBadPixelCorrection(self):
+        print "Not ready, yet"
 
+    def OnFlatfieldCorrection(self):
+        print "Not ready, yet"
+
+    def OffFlatfieldCorrection(self):
+        print "Not ready, yet"
+
+    def OnSelectDataColumn(self):
+        print "Not ready."
+
+    def OnListSelected(self):
+        print "Not ready."
+
+    def RedrawImage(self):
+        print "Not ready."
+
+    def OnRemoveFile(self):
+        print "Not ready."
+
+    def OnRemoveAllFiles(self):
+        print "Not ready."
+
+    def OnResetDataROI(self):
+        print "Not ready."
 
 
 def main():
