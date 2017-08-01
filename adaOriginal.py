@@ -40,7 +40,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import wx
 
-from areadata import AreaData
+from areadataOriginal import AreaData
 
 
 class RedirectText(object):
@@ -242,10 +242,10 @@ class AreaDetectorAnalysisFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnSave, self.save)  # </
         self.Bind(wx.EVT_BUTTON, self.OnNext, self.next)  # </
         self.Bind(wx.EVT_BUTTON, self.OnSaveAs, self.saveas)  # </
-        self.Bind(wx.EVT_SPINCTRL, self.RedrawImage)
-        self.canvas1.mpl_connect('motion_notify_event', self.OnMouseMove)
-        self.canvas1.mpl_connect('button_press_event', self.OnMousePress)
-        self.canvas1.mpl_connect('button_release_event', self.OnMouseRelease)
+        self.Bind(wx.EVT_SPINCTRL, self.RedrawImage)  # </
+        self.canvas1.mpl_connect('motion_notify_event', self.OnMouseMove)  # </
+        self.canvas1.mpl_connect('button_press_event', self.OnMousePress)  # </
+        self.canvas1.mpl_connect('button_release_event', self.OnMouseRelease)  # </
 
         redir = RedirectText(self.log)
         sys.stdout=redir
@@ -400,8 +400,8 @@ class AreaDetectorAnalysisFrame(wx.Frame):
             event.Skip()
     
     def OnSaveNext(self, event):
-        self.OnSave(event)
-        self.OnNext(event)
+        self.OnSave(event)  # </
+        self.OnNext(event)  # </
     
     def OnSaveAs(self, event): 
         savedlg = wx.FileDialog(self, "Save the data into a file", os.getcwd(), 
@@ -414,7 +414,7 @@ class AreaDetectorAnalysisFrame(wx.Frame):
         savedlg.Destroy()
 
     def OnFileExit(self, event):
-        self.Close(True)
+        self.Close(True)  # </
 
     def OnColor(self, event):
         dlg = wx.ColourDialog(self)
@@ -437,55 +437,55 @@ class AreaDetectorAnalysisFrame(wx.Frame):
         self.is_metadata_read = True 
         
     def OnRemoveFileButton(self, event):
-        try:
-            ndx = self.filelistbox.GetSelection()
-            self.filelistbox.Delete(ndx) # wxPython ListBox method
-            self.filelist.remove(self.filelist[ndx]) # Python list method
-            self.metadatalist.remove(self.metadatalist[ndx])
-            if len(self.filelist) == 0: 
-                self.is_metadata_read = False
-        except IndexError:
-            event.Skip()
+        try:  # </
+            ndx = self.filelistbox.GetSelection()  # </
+            self.filelistbox.Delete(ndx) # wxPython ListBox method  # </
+            self.filelist.remove(self.filelist[ndx]) # Python list method  # </
+            self.metadatalist.remove(self.metadatalist[ndx])   # </
+            if len(self.filelist) == 0:    # </
+                self.is_metadata_read = False   # </
+        except IndexError:   # </
+            event.Skip()   # </
 
     def OnRemoveAllFileButton(self, event):
-        try:
-            self.filelistbox.Clear() # wxPython ListBox method
-            self.filelist = [] # Python list method
-            self.metadatalist = []
-            self.is_metadata_read = False
-        except IndexError as e:
-            print(e)
-            event.Skip()
+        try:  # </
+            self.filelistbox.Clear() # wxPython ListBox method  # </
+            self.filelist = [] # Python list method  # </
+            self.metadatalist = []  # </
+            self.is_metadata_read = False  # </
+        except IndexError as e:  # </
+            print(e)  # </
+            event.Skip()  # </
         
     def OnListSelected(self, event):
-        try:
-            self.filendx = self.filelistbox.GetSelection()
-            self.curimg = Image.open(self.filelist[self.filendx])
-            self.imarray = np.array(self.curimg)
-            if self.efficiency_on == True:
-                self.imarray = self.imarray/self.efficiencyarray
-            if self.bad_pixels_on == True:
-                for i in range(len(self.bad_pixels)):
+        try:  # </
+            self.filendx = self.filelistbox.GetSelection()  # </
+            self.curimg = Image.open(self.filelist[self.filendx])  # </
+            self.imarray = np.array(self.curimg)  # </
+            if self.efficiency_on == True:  # </
+                self.imarray = self.imarray/self.efficiencyarray  # </
+            if self.bad_pixels_on == True:  # </
+                for i in range(len(self.bad_pixels)):  # </
                     self.imarray[self.bad_pixels[i][1],self.bad_pixels[i][0]] = \
-                    self.imarray[self.replacing_pixels[i][1],self.replacing_pixels[i][0]]  
-            if self.metadatalist[self.filendx]:
-                self.hkl_H.SetValue(str('%4.3f' % self.metadatalist[self.filendx][self.Hcol]))
-                self.hkl_K.SetValue(str('%4.3f' % self.metadatalist[self.filendx][self.Kcol]))
-                self.hkl_L.SetValue(str('%4.3f' % self.metadatalist[self.filendx][self.Lcol]))
-                self.energy.SetValue(str('%6.4f' % self.metadatalist[self.filendx][self.Ecol]))
-                self.mon.SetValue(str('%12d' % self.metadatalist[self.filendx][self.Mcol]))
-                self.trans.SetValue(str('%6.5e' % self.metadatalist[self.filendx][self.Tcol]))
-            elif not self.metadatalist[self.filendx]:
-                self.hkl_H.SetValue("nan")
-                self.hkl_K.SetValue("nan")
-                self.hkl_L.SetValue("nan")
-                self.energy.SetValue("nan")
-                self.mon.SetValue("nan")
-                self.trans.SetValue("nan")
-            self.RedrawImage(event)
-        except IndexError as e:
-            print(e)
-            event.Skip()
+                    self.imarray[self.replacing_pixels[i][1],self.replacing_pixels[i][0]]    # </
+            if self.metadatalist[self.filendx]:  # </
+                self.hkl_H.SetValue(str('%4.3f' % self.metadatalist[self.filendx][self.Hcol]))  # </
+                self.hkl_K.SetValue(str('%4.3f' % self.metadatalist[self.filendx][self.Kcol]))  # </
+                self.hkl_L.SetValue(str('%4.3f' % self.metadatalist[self.filendx][self.Lcol]))  # </
+                self.energy.SetValue(str('%6.4f' % self.metadatalist[self.filendx][self.Ecol]))  # </
+                self.mon.SetValue(str('%12d' % self.metadatalist[self.filendx][self.Mcol]))  # </
+                self.trans.SetValue(str('%6.5e' % self.metadatalist[self.filendx][self.Tcol]))  # </
+            elif not self.metadatalist[self.filendx]:  # </
+                self.hkl_H.SetValue("nan")  # </
+                self.hkl_K.SetValue("nan")  # </
+                self.hkl_L.SetValue("nan")  # </
+                self.energy.SetValue("nan")  # </
+                self.mon.SetValue("nan")  # </
+                self.trans.SetValue("nan")  # </
+            self.RedrawImage(event)  # </
+        except IndexError as e:  # </
+            print(e)  # </
+            event.Skip()  # </
 
     def OnMousePress(self, event):
         if event.button == 1 and event.xdata and event.ydata:
@@ -593,45 +593,45 @@ class AreaDetectorAnalysisFrame(wx.Frame):
            There must be only one choice for the image mode and one current 
            size of figure canvas to determine the image size. 
         """
-        try:
-            if self.imarray.any():
-                self.resetRoiRange()
-                ih,iw = self.imarray.shape
-                droi,proi,broi = self.getRoiValues()
-                if droi == (0,0,0,0):
-                    self.sc_dxc.SetValue(iw/2)
-                    self.sc_dyc.SetValue(ih/2)
-                    self.sc_dxw.SetValue(iw)
-                    self.sc_dyw.SetValue(ih)
-                    self.RedrawImage(event)
-                    return
-                else:
-                    h,bins = np.histogram(self.imarray)
-                    vmin = bins[0]
-                    vmax = bins[-1]                    
-                    dxlim = [droi[0]-droi[2]/2.-0.5,droi[0]+droi[2]/2.+0.5]
-                    dylim = [droi[1]+droi[3]/2.-0.5,droi[1]-droi[3]/2.+0.5]
-                    px = [proi[0]-proi[2]/2., proi[0]+proi[2]/2., proi[0]+proi[2]/2., proi[0]-proi[2]/2., proi[0]-proi[2]/2.]
-                    py = [proi[1]-proi[3]/2., proi[1]-proi[3]/2., proi[1]+proi[3]/2., proi[1]+proi[3]/2., proi[1]-proi[3]/2.]
-                    bx = [broi[0]-broi[2]/2., broi[0]+broi[2]/2., broi[0]+broi[2]/2., broi[0]-broi[2]/2., broi[0]-broi[2]/2.]
-                    by = [broi[1]-broi[3]/2., broi[1]-broi[3]/2., broi[1]+broi[3]/2., broi[1]+broi[3]/2., broi[1]-broi[3]/2.]
-                    self.figure1.clear() 
-                    ax = self.figure1.gca() # this is important line to make image visible
-                    ax.imshow(self.imarray,interpolation='none',vmin=vmin,vmax=vmax)
-                    ax.set_xlim(dxlim)
-                    ax.set_ylim(dylim)
-                    ax.plot(px,py,'y-',linewidth=1.0)
-                    ax.plot(bx,by,'g-',linewidth=1.0)
-                    self.canvas1.draw()
-                    if (0 in proi) or (0 in broi):
-                        pass
-                    else:
-                        self.areaIntegrationShow(self.imarray, droi, proi, broi)
+        try:  # </
+            if self.imarray.any():  # </
+                self.resetRoiRange()  # </
+                ih,iw = self.imarray.shape  # </
+                droi,proi,broi = self.getRoiValues()  # </
+                if droi == (0,0,0,0):  # </
+                    self.sc_dxc.SetValue(iw/2)  # </
+                    self.sc_dyc.SetValue(ih/2)  # </
+                    self.sc_dxw.SetValue(iw)   # </
+                    self.sc_dyw.SetValue(ih)  # </
+                    self.RedrawImage(event)  # </
+                    return    # </
+                else:  # </
+                    h,bins = np.histogram(self.imarray)  # </
+                    vmin = bins[0]  # </
+                    vmax = bins[-1]   # </
+                    dxlim = [droi[0]-droi[2]/2.-0.5,droi[0]+droi[2]/2.+0.5]  # </
+                    dylim = [droi[1]+droi[3]/2.-0.5,droi[1]-droi[3]/2.+0.5]  # </
+                    px = [proi[0]-proi[2]/2., proi[0]+proi[2]/2., proi[0]+proi[2]/2., proi[0]-proi[2]/2., proi[0]-proi[2]/2.]  # </
+                    py = [proi[1]-proi[3]/2., proi[1]-proi[3]/2., proi[1]+proi[3]/2., proi[1]+proi[3]/2., proi[1]-proi[3]/2.]  # </
+                    bx = [broi[0]-broi[2]/2., broi[0]+broi[2]/2., broi[0]+broi[2]/2., broi[0]-broi[2]/2., broi[0]-broi[2]/2.]  # </
+                    by = [broi[1]-broi[3]/2., broi[1]-broi[3]/2., broi[1]+broi[3]/2., broi[1]+broi[3]/2., broi[1]-broi[3]/2.]  # </
+                    self.figure1.clear()   # </
+                    ax = self.figure1.gca() # this is important line to make image visible  # </
+                    ax.imshow(self.imarray,interpolation='none',vmin=vmin,vmax=vmax)  # </
+                    ax.set_xlim(dxlim)  # </
+                    ax.set_ylim(dylim)  # </
+                    ax.plot(px,py,'y-',linewidth=1.0)  # </
+                    ax.plot(bx,by,'g-',linewidth=1.0)  # </
+                    self.canvas1.draw()  # </
+                    if (0 in proi) or (0 in broi):  # </
+                        pass  # </
+                    else:  # </
+                        self.areaIntegrationShow(self.imarray, droi, proi, broi)  # </
         except AttributeError:
             pass
             
     def areaIntegrationShow(self,lum_img,droi,proi,broi):
-        areadata = AreaData(lum_img, droi, proi, broi)
+        areadata = AreaData(lum_img, droi, proi, broi)  #
         self.I2d, self.sigI2d = areadata.areaIntegral()
         xb2,yb2,yb2_err,yb2_pln,self.I1d1, self.sigI1d1 = areadata.lineIntegral(1,self.sc_pln_order2.GetValue())
         xb3,yb3,yb3_err,yb3_pln,self.I1d0, self.sigI1d0 = areadata.lineIntegral(0,self.sc_pln_order1.GetValue())
@@ -664,45 +664,45 @@ class AreaDetectorAnalysisFrame(wx.Frame):
     
     def OnResetDataROI(self, event):
         try:
-            if self.imarray.any():
-                ih,iw = self.imarray.shape
-                self.sc_dxc.SetRange(0,iw); self.sc_dxc.SetValue(iw/2)
-                self.sc_dyc.SetRange(0,ih); self.sc_dyc.SetValue(ih/2)
-                self.sc_dxw.SetRange(0,iw); self.sc_dxw.SetValue(iw)
-                self.sc_dyw.SetRange(0,ih); self.sc_dyw.SetValue(ih)
-                self.RedrawImage(event)
-        except AttributeError:
-            event.Skip()
+            if self.imarray.any():  # </
+                ih,iw = self.imarray.shape  # </
+                self.sc_dxc.SetRange(0,iw); self.sc_dxc.SetValue(iw/2)  # </
+                self.sc_dyc.SetRange(0,ih); self.sc_dyc.SetValue(ih/2)  # </
+                self.sc_dxw.SetRange(0,iw); self.sc_dxw.SetValue(iw)  # </
+                self.sc_dyw.SetRange(0,ih); self.sc_dyw.SetValue(ih)  # </
+                self.RedrawImage(event)  # </
+        except AttributeError:  # </
+            event.Skip()  # </
            
     def resetRoiRange(self):        
-        ih,iw = self.imarray.shape
-        self.sc_dxc.SetRange(0,iw)
-        self.sc_dyc.SetRange(0,ih)
-        self.sc_dxw.SetRange(0,iw)
-        self.sc_dyw.SetRange(0,ih)
-        self.sc_pxc.SetRange(0,iw)
-        self.sc_pyc.SetRange(0,ih)
-        self.sc_pxw.SetRange(0,iw)
-        self.sc_pyw.SetRange(0,ih)
-        self.sc_bxc.SetRange(0,iw)
-        self.sc_byc.SetRange(0,ih)
-        self.sc_bxw.SetRange(0,iw)
-        self.sc_byw.SetRange(0,ih)
+        ih,iw = self.imarray.shape  # </
+        self.sc_dxc.SetRange(0,iw)  # </
+        self.sc_dyc.SetRange(0,ih)  # </
+        self.sc_dxw.SetRange(0,iw)  # </
+        self.sc_dyw.SetRange(0,ih)  # </
+        self.sc_pxc.SetRange(0,iw)  # </
+        self.sc_pyc.SetRange(0,ih)  # </
+        self.sc_pxw.SetRange(0,iw)  # </
+        self.sc_pyw.SetRange(0,ih)  # </
+        self.sc_bxc.SetRange(0,iw)  # </
+        self.sc_byc.SetRange(0,ih)  # </
+        self.sc_bxw.SetRange(0,iw)  # </
+        self.sc_byw.SetRange(0,ih)  # </
             
     def getRoiValues(self):
-        dxc=self.sc_dxc.GetValue()
-        dyc=self.sc_dyc.GetValue()
-        dxw=self.sc_dxw.GetValue()
-        dyw=self.sc_dyw.GetValue()
-        pxc=self.sc_pxc.GetValue()
-        pyc=self.sc_pyc.GetValue()
-        pxw=self.sc_pxw.GetValue()
-        pyw=self.sc_pyw.GetValue()
-        bxc=self.sc_bxc.GetValue()
-        byc=self.sc_byc.GetValue()
-        bxw=self.sc_bxw.GetValue()
-        byw=self.sc_byw.GetValue()
-        return (dxc,dyc,dxw,dyw), (pxc,pyc,pxw,pyw), (bxc,byc,bxw,byw)            
+        dxc=self.sc_dxc.GetValue()  # </
+        dyc=self.sc_dyc.GetValue()  # </
+        dxw=self.sc_dxw.GetValue()  # </
+        dyw=self.sc_dyw.GetValue()  # </
+        pxc=self.sc_pxc.GetValue()  # </
+        pyc=self.sc_pyc.GetValue()  # </
+        pxw=self.sc_pxw.GetValue()  # </
+        pyw=self.sc_pyw.GetValue()  # </
+        bxc=self.sc_bxc.GetValue()  # </
+        byc=self.sc_byc.GetValue()  # </
+        bxw=self.sc_bxw.GetValue()  # </
+        byw=self.sc_byw.GetValue()  # </
+        return (dxc,dyc,dxw,dyw), (pxc,pyc,pxw,pyw), (bxc,byc,bxw,byw)      # </
             
 class App(wx.App):
     """Application class"""

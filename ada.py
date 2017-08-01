@@ -13,6 +13,8 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pylab as plt
+from PIL import Image
+import numpy as np
 
 # ---------------------------------------------------------------------------------------------------------------------#
 
@@ -27,8 +29,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.setCentralWidget(self.centralWidget)
         self.createMenus()
 
-        self.filelist = []
-        self.metadatalist = []
+        self.fileList = []
+        self.metadataList = []
         self.is_metadata_read = False
         self.imarray = []
         self.savedatafile = None
@@ -177,6 +179,21 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.nextBtn.clicked.connect(self.OnNext)
         self.saveAndNextBtn.clicked.connect(self.OnSaveNext)
         self.resetRoiBtn.clicked.connect(self.OnResetDataROI)
+        self.sc_dxc.valueChanged.connect(self.RedrawImage)
+        self.sc_dyc.valueChanged.connect(self.RedrawImage)
+        self.sc_dxw.valueChanged.connect(self.RedrawImage)
+        self.sc_dyw.valueChanged.connect(self.RedrawImage)
+        self.sc_pxc.valueChanged.connect(self.RedrawImage)
+        self.sc_pyc.valueChanged.connect(self.RedrawImage)
+        self.sc_pxw.valueChanged.connect(self.RedrawImage)
+        self.sc_pyw.valueChanged.connect(self.RedrawImage)
+        self.sc_bxc.valueChanged.connect(self.RedrawImage)
+        self.sc_byc.valueChanged.connect(self.RedrawImage)
+        self.sc_bxw.valueChanged.connect(self.RedrawImage)
+        self.sc_byw.valueChanged.connect(self.RedrawImage)
+        self.canvas1.mpl_connect('motion_notify_event', self.OnMouseMove)
+        self.canvas1.mpl_connect('button_press_event', self.OnMousePress)
+        self.canvas1.mpl_connect('button_release_event', self.OnMouseRelease)
 
 
 
@@ -267,13 +284,13 @@ class AreaDetectorAnalysisWindow(QMainWindow):
             images = os.listdir(dir)
 
             for img in images:
-                self.fileListBox.addItem(img)  # wxPython ListBox method
+                self.fileListBox.addItem(img)
                 if dir.find("/") == 0:
-                    self.filelist.append(dir + '/' + img)
+                    self.fileList.append(dir + '/' + img)
                 elif dir.find("\\") == 0:
-                    self.filelist.append(dir + '\\' + img)
+                    self.fileList.append(dir + '\\' + img)
 
-                self.metadatalist.append([])
+                self.metadataList.append([])
 
 
     def OnReadMetaData(self):
@@ -289,7 +306,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         print "Not ready, yet."
 
     def OnSaveNext(self):
-        print "Not ready, yet."
+        self.OnSave()
+        self.OnNext()
 
     def OnExit(self):
         self.close()
@@ -310,19 +328,145 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         print "Not ready."
 
     def OnListSelected(self):
-        print "Not ready."
+        self.imgIndx = self.fileListBox.currentRow()
+        self.curimg = Image.open(self.fileList[self.imgIndx])
+        self.imgArray = np.array(self.curimg)
+
+        if self.efficiency_on == True:
+            self.imarray = self.imarray / self.efficiencyarray
+
+        if self.bad_pixels_on == True:
+            for i in range(len(self.bad_pixels)):
+                self.imgArray[self.bad_pixels[i][1], self.bad_pixels[i][0]] = \
+                    self.imgArray[self.replacing_pixels[i][1], self.replacing_pixels[i][0]]
+
+        if self.metadataList[self.imgIndx]:
+            self.hkl_H.setText(str('%4.3f' % self.metadataList[self.imgIndx][self.Hcol]))
+            self.hkl_K.setText(str('%4.3f' % self.metadataList[self.imgIndx][self.Kcol]))
+            self.hkl_L.setText(str('%4.3f' % self.metadataList[self.imgIndx][self.Lcol]))
+            self.energy.setText(str('%6.4f' % self.metadataList[self.imgIndx][self.Ecol]))
+            self.mon.setText(str('%12d' % self.metadataList[self.imgIndx][self.Mcol]))
+            self.trans.setText(str('%6.5e' % self.metadataList[self.imgIndx][self.Tcol]))
+        elif not self.metadataList[self.imgIndx]:
+            self.hkl_H.setText("nan")
+            self.hkl_K.setText("nan")
+            self.hkl_L.setText("nan")
+            self.energy.setText("nan")
+            self.mon.setText("nan")
+            self.trans.setText("nan")
+
+        self.RedrawImage()
 
     def RedrawImage(self):
-        print "Not ready."
+        if self.imgArray.any():
+            self.resetRoiRange()
+            ih, iw = self.imgArray.shape
+            droi, proi, broi = self.getRoiValues()
+            if droi == (0, 0, 0, 0):
+                self.sc_dxc.setValue(iw / 2)
+                self.sc_dyc.setValue(ih / 2)
+                self.sc_dxw.setValue(iw)
+                self.sc_dyw.setValue(ih)
+                self.RedrawImage()
+                return
+            else:
+                h, bins = np.histogram(self.imgArray)
+                vmin = bins[0]
+                vmax = bins[-1]
+                dxlim = [droi[0] - droi[2] / 2. - 0.5, droi[0] + droi[2] / 2. + 0.5]
+                dylim = [droi[1] + droi[3] / 2. - 0.5, droi[1] - droi[3] / 2. + 0.5]
+                px = [proi[0] - proi[2] / 2., proi[0] + proi[2] / 2., proi[0] + proi[2] / 2., proi[0] - proi[2] / 2.,
+                      proi[0] - proi[2] / 2.]
+                py = [proi[1] - proi[3] / 2., proi[1] - proi[3] / 2., proi[1] + proi[3] / 2., proi[1] + proi[3] / 2.,
+                      proi[1] - proi[3] / 2.]
+                bx = [broi[0] - broi[2] / 2., broi[0] + broi[2] / 2., broi[0] + broi[2] / 2., broi[0] - broi[2] / 2.,
+                      broi[0] - broi[2] / 2.]
+                by = [broi[1] - broi[3] / 2., broi[1] - broi[3] / 2., broi[1] + broi[3] / 2., broi[1] + broi[3] / 2.,
+                      broi[1] - broi[3] / 2.]
+                self.figure1.clear()
+                ax = self.figure1.gca()  # this is important line to make image visible
+                ax.imshow(self.imgArray, interpolation='none', vmin=vmin, vmax=vmax)
+                ax.set_xlim(dxlim)
+                ax.set_ylim(dylim)
+                ax.plot(px, py, 'y-', linewidth=1.0)
+                ax.plot(bx, by, 'g-', linewidth=1.0)
+                self.canvas1.draw()
+                if (0 in proi) or (0 in broi):
+                    pass
+                else:
+                    self.areaIntegrationShow(self.imarray, droi, proi, broi)
+
 
     def OnRemoveFile(self):
-        print "Not ready."
+        if len(self.fileList) != 0:
+            indx = self.fileListBox.currentRow()
+            self.fileListBox.takeItem(indx)
+            self.fileList.remove(self.fileList[indx])
+            self.metadataList.remove(self.metadataList[indx])
+            if len(self.fileList) == 0:
+                self.is_metadata_read = False
 
     def OnRemoveAllFiles(self):
-        print "Not ready."
+        if len(self.fileList) != 0:
+            self.fileListBox.clear()
+            self.fileList = []
+            self.metadataList = []
+            self.is_metadata_read = False
 
     def OnResetDataROI(self):
-        print "Not ready."
+        if self.imgArray.any():
+            ih, iw = self.imgArray.shape
+            self.sc_dxc.setRange(0, iw)
+            self.sc_dxc.setValue(iw / 2)
+            self.sc_dyc.setRange(0, ih)
+            self.sc_dyc.setValue(ih / 2)
+            self.sc_dxw.setRange(0, iw)
+            self.sc_dxw.setValue(iw)
+            self.sc_dyw.setRange(0, ih)
+            self.sc_dyw.setValue(ih)
+            self.RedrawImage()
+
+    def resetRoiRange(self):
+        ih, iw = self.imgArray.shape
+        self.sc_dxc.setRange(0, iw)
+        self.sc_dyc.setRange(0, ih)
+        self.sc_dxw.setRange(0, iw)
+        self.sc_dyw.setRange(0, ih)
+        self.sc_pxc.setRange(0, iw)
+        self.sc_pyc.setRange(0, ih)
+        self.sc_pxw.setRange(0, iw)
+        self.sc_pyw.setRange(0, ih)
+        self.sc_bxc.setRange(0, iw)
+        self.sc_byc.setRange(0, ih)
+        self.sc_bxw.setRange(0, iw)
+        self.sc_byw.setRange(0, ih)
+
+    def areaIntegrationShow(self,lum_img,droi,proi,broi):
+        pass
+
+    def getRoiValues(self):
+        dxc = self.sc_dxc.value()
+        dyc = self.sc_dyc.value()
+        dxw = self.sc_dxw.value()
+        dyw = self.sc_dyw.value()
+        pxc = self.sc_pxc.value()
+        pyc = self.sc_pyc.value()
+        pxw = self.sc_pxw.value()
+        pyw = self.sc_pyw.value()
+        bxc = self.sc_bxc.value()
+        byc = self.sc_byc.value()
+        bxw = self.sc_bxw.value()
+        byw = self.sc_byw.value()
+        return (dxc, dyc, dxw, dyw), (pxc, pyc, pxw, pyw), (bxc, byc, bxw, byw)
+
+    def OnMouseMove(self, event):
+        print "Mouse moved."
+
+    def OnMousePress(self, event):
+        print "Mouse was pressed."
+
+    def OnMouseRelease(self, event):
+        print "Mouse was released."
 
 
 def main():
