@@ -487,66 +487,66 @@ class AreaDetectorAnalysisFrame(wx.Frame):
             print(e)  # </
             event.Skip()  # </
 
-    def OnMousePress(self, event):
-        if event.button == 1 and event.xdata and event.ydata:
-            self.mouse1_is_pressed = True
-            self.mousex0 = event.xdata
-            self.mousey0 = event.ydata
-        elif event.button == 3 and event.xdata and event.ydata:
-            self.mouse3_is_pressed = True
-        else:
-            pass
+    def OnMousePress(self, event):  # </
+        if event.button == 1 and event.xdata and event.ydata:  # </
+            self.mouse1_is_pressed = True   # </
+            self.mousex0 = event.xdata  # </
+            self.mousey0 = event.ydata  # </
+        elif event.button == 3 and event.xdata and event.ydata:  # </
+            self.mouse3_is_pressed = True  # </
+        else:  # </
+            pass  # </
         
     def OnMouseMove(self, event):
         """Get image coordinates and display"""
-        try:
-            if self.imarray.any():
-                if event.inaxes:
-                    ix,iy = event.xdata, event.ydata
-                    iz = self.imarray[np.int(round(iy)),np.int(round(ix))]
-                    self.SetStatusText("p=("+str(int(round(ix)))+', '+str(int(round(iy)))+"), I="+str(iz))
-                    if self.mouse1_is_pressed == True:
-                        xw = ix-self.mousex0
-                        yw = iy-self.mousey0
-                        ax = self.figure1.gca()
-                        rect=Rectangle((self.mousex0,self.mousey0),xw,yw,linestyle='solid',color='magenta',fill=True,alpha=0.4)
-                        ax.add_patch(rect)
-                        for item in ax.findobj(match=Rectangle)[:-2]:
-                           item.remove()
-                        self.canvas1.draw()            
-                else:
-                    self.SetStatusText("")
-        except (AttributeError, IndexError):
+        try:  # </
+            if self.imarray.any():  # </
+                if event.inaxes:  # </
+                    ix,iy = event.xdata, event.ydata  # </
+                    iz = self.imarray[np.int(round(iy)),np.int(round(ix))]  # </
+                    self.SetStatusText("p=("+str(int(round(ix)))+', '+str(int(round(iy)))+"), I="+str(iz))  # </
+                    if self.mouse1_is_pressed == True:  # </
+                        xw = ix-self.mousex0  # </
+                        yw = iy-self.mousey0  # </
+                        ax = self.figure1.gca()  # </
+                        rect=Rectangle((self.mousex0,self.mousey0),xw,yw,linestyle='solid',color='magenta',fill=True,alpha=0.4)  # </
+                        ax.add_patch(rect)  # </
+                        for item in ax.findobj(match=Rectangle)[:-2]:  # </
+                           item.remove()  # </
+                        self.canvas1.draw()       # </
+                else:  # </
+                    self.SetStatusText("")  # </
+        except (AttributeError, IndexError):  # </
             pass
                         
     def OnMouseRelease(self, event):
-        try:
-            if event.button == 1:
-                self.mouse1_is_pressed = False
-                self.mousex1 = event.xdata
-                self.mousey1 = event.ydata
-                self.sc_dxc.SetValue(int(abs(self.mousex1+self.mousex0)/2))
-                self.sc_dyc.SetValue(int(abs(self.mousey1+self.mousey0)/2))
-                self.sc_pxc.SetValue(int(abs(self.mousex1+self.mousex0)/2))
-                self.sc_pyc.SetValue(int(abs(self.mousey1+self.mousey0)/2))
-                self.sc_bxc.SetValue(int(abs(self.mousex1+self.mousex0)/2))
-                self.sc_byc.SetValue(int(abs(self.mousey1+self.mousey0)/2))                   
-                if abs(self.mousex1-self.mousex0) < 1 or abs(self.mousey1-self.mousey0) < 1:
-                    pass
-                else:
-                    self.sc_dxw.SetValue(int(abs(self.mousex1-self.mousex0)))
-                    self.sc_dyw.SetValue(int(abs(self.mousey1-self.mousey0)))
-                    self.sc_pxw.SetValue(int(abs(self.mousex1-self.mousex0)*0.3))
-                    self.sc_pyw.SetValue(int(abs(self.mousey1-self.mousey0)*0.3))
-                    self.sc_bxw.SetValue(int(abs(self.mousex1-self.mousex0)*0.6))
-                    self.sc_byw.SetValue(int(abs(self.mousey1-self.mousey0)*0.6))
-            elif event.button == 3:
-                self.mouse3_is_pressed = False
-                self.sc_dxw.SetValue(self.sc_dxw.GetValue()*1.25)
-                self.sc_dyw.SetValue(self.sc_dyw.GetValue()*1.25)
-            self.RedrawImage(event)
-        except AttributeError:
-            pass
+        try:   # </
+            if event.button == 1:  # </
+                self.mouse1_is_pressed = False  # </
+                self.mousex1 = event.xdata  # </
+                self.mousey1 = event.ydata  # </
+                self.sc_dxc.SetValue(int(abs(self.mousex1+self.mousex0)/2))  # </
+                self.sc_dyc.SetValue(int(abs(self.mousey1+self.mousey0)/2))  # </
+                self.sc_pxc.SetValue(int(abs(self.mousex1+self.mousex0)/2))  # </
+                self.sc_pyc.SetValue(int(abs(self.mousey1+self.mousey0)/2))  # </
+                self.sc_bxc.SetValue(int(abs(self.mousex1+self.mousex0)/2))  # </
+                self.sc_byc.SetValue(int(abs(self.mousey1+self.mousey0)/2))      # </
+                if abs(self.mousex1-self.mousex0) < 1 or abs(self.mousey1-self.mousey0) < 1:  # </
+                    pass  # </
+                else:  # </
+                    self.sc_dxw.SetValue(int(abs(self.mousex1-self.mousex0)))  # </
+                    self.sc_dyw.SetValue(int(abs(self.mousey1-self.mousey0)))  # </
+                    self.sc_pxw.SetValue(int(abs(self.mousex1-self.mousex0)*0.3))  # </
+                    self.sc_pyw.SetValue(int(abs(self.mousey1-self.mousey0)*0.3))  # </
+                    self.sc_bxw.SetValue(int(abs(self.mousex1-self.mousex0)*0.6))  # </
+                    self.sc_byw.SetValue(int(abs(self.mousey1-self.mousey0)*0.6))  # </
+            elif event.button == 3:  # </
+                self.mouse3_is_pressed = False  # </
+                self.sc_dxw.SetValue(self.sc_dxw.GetValue()*1.25)  # </
+                self.sc_dyw.SetValue(self.sc_dyw.GetValue()*1.25)  # </
+            self.RedrawImage(event)  # </
+        except AttributeError:  # </
+            pass  # </
 
     def OnBadpixelCorrectionOn(self, event):
         dlg = wx.FileDialog(self, "Open a bad pixel file...", os.getcwd(), 
@@ -630,33 +630,33 @@ class AreaDetectorAnalysisFrame(wx.Frame):
         except AttributeError:
             pass
             
-    def areaIntegrationShow(self,lum_img,droi,proi,broi):
-        areadata = AreaData(lum_img, droi, proi, broi)  #
-        self.I2d, self.sigI2d = areadata.areaIntegral()
-        xb2,yb2,yb2_err,yb2_pln,self.I1d1, self.sigI1d1 = areadata.lineIntegral(1,self.sc_pln_order2.GetValue())
-        xb3,yb3,yb3_err,yb3_pln,self.I1d0, self.sigI1d0 = areadata.lineIntegral(0,self.sc_pln_order1.GetValue())
-        # plot in canvas2        
-        self.figure2.clear()
-        self.figure2.add_subplot(111)
-        ax2 = self.figure2.gca()
-        ax2.errorbar(xb2,yb2,yerr=yb2_err,fmt='ro-',capsize=2.0)
-        ax2.plot(xb2,yb2_pln,'bo--', markerfacecolor='none')
-        ax2.set_title("1D Integration(2)",fontsize=10)
-        ax2.set_xlabel("y (pixel)")
-        ax2.set_ylabel("Int. (counts)")
-        self.figure2.tight_layout()
-        self.canvas2.draw()
-        # plot in canvas3
-        self.figure3.clear()
-        self.figure3.add_subplot(111)
-        ax3 = self.figure3.gca()
-        ax3.errorbar(xb3,yb3,yerr=yb3_err,fmt='ro-',capsize=2.0)
-        ax3.plot(xb3,yb3_pln,'bo--',markerfacecolor='none')
-        ax3.set_title("1D Integration(1)",fontsize=10)
-        ax3.set_xlabel("x (pixel)")
-        ax3.set_ylabel("Int. (counts)")
-        self.figure3.tight_layout()
-        self.canvas3.draw()
+    def areaIntegrationShow(self,lum_img,droi,proi,broi):  # </
+        areadata = AreaData(lum_img, droi, proi, broi)  # </
+        self.I2d, self.sigI2d = areadata.areaIntegral()  # </
+        xb2,yb2,yb2_err,yb2_pln,self.I1d1, self.sigI1d1 = areadata.lineIntegral(1,self.sc_pln_order2.GetValue())  # </
+        xb3,yb3,yb3_err,yb3_pln,self.I1d0, self.sigI1d0 = areadata.lineIntegral(0,self.sc_pln_order1.GetValue())  # </
+        # plot in canvas2          # </
+        self.figure2.clear()  # </
+        self.figure2.add_subplot(111)  # </
+        ax2 = self.figure2.gca()  # </
+        ax2.errorbar(xb2,yb2,yerr=yb2_err,fmt='ro-',capsize=2.0)  # </
+        ax2.plot(xb2,yb2_pln,'bo--', markerfacecolor='none')  # </
+        ax2.set_title("1D Integration(2)",fontsize=10)  # </
+        ax2.set_xlabel("y (pixel)")  # </
+        ax2.set_ylabel("Int. (counts)")  # </
+        self.figure2.tight_layout()  # </
+        self.canvas2.draw()  # </
+        # plot in canvas3  # </
+        self.figure3.clear()  # </
+        self.figure3.add_subplot(111)  # </
+        ax3 = self.figure3.gca()  # </
+        ax3.errorbar(xb3,yb3,yerr=yb3_err,fmt='ro-',capsize=2.0)  # </
+        ax3.plot(xb3,yb3_pln,'bo--',markerfacecolor='none')  # </
+        ax3.set_title("1D Integration(1)",fontsize=10)  # </
+        ax3.set_xlabel("x (pixel)")  # </
+        ax3.set_ylabel("Int. (counts)")  # </
+        self.figure3.tight_layout()  # </
+        self.canvas3.draw()  # </
         # output        
         print("\nImage file: "+self.filelist[self.filendx].split('\\')[-1])
         print("\n%18s %18s %18s %18s %18s %18s" % ("Int_1d(1)","sigInt_1d(1)","Int_1d(2)","sigInt_1d(2)","Int_2d","sigInt_2d"))

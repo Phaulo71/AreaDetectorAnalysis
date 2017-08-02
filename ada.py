@@ -15,6 +15,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pylab as plt
 from PIL import Image
 import numpy as np
+from matplotlib.patches import Rectangle
+from areaData import AreaData
 
 # ---------------------------------------------------------------------------------------------------------------------#
 
@@ -32,12 +34,13 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.fileList = []
         self.metadataList = []
         self.is_metadata_read = False
-        self.imarray = []
+        self.imgArray = np.array(0)
         self.savedatafile = None
         self.bad_pixels_on = False
         self.bad_pixels = []
         self.replacing_pixels = []
         self.efficiency_on = False
+        self.mouse1_is_pressed = False
 
         # File list widgets
         self.fileListTitle = QLabel("Image files to load")
@@ -333,7 +336,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.imgArray = np.array(self.curimg)
 
         if self.efficiency_on == True:
-            self.imarray = self.imarray / self.efficiencyarray
+            self.imgArray = self.imarray / self.efficiencyarray
 
         if self.bad_pixels_on == True:
             for i in range(len(self.bad_pixels)):
@@ -391,10 +394,11 @@ class AreaDetectorAnalysisWindow(QMainWindow):
                 ax.plot(px, py, 'y-', linewidth=1.0)
                 ax.plot(bx, by, 'g-', linewidth=1.0)
                 self.canvas1.draw()
+
                 if (0 in proi) or (0 in broi):
                     pass
                 else:
-                    self.areaIntegrationShow(self.imarray, droi, proi, broi)
+                    self.areaIntegrationShow(self.imgArray, droi, proi, broi)
 
 
     def OnRemoveFile(self):
@@ -442,7 +446,32 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.sc_byw.setRange(0, ih)
 
     def areaIntegrationShow(self,lum_img,droi,proi,broi):
-        pass
+        areadata = AreaData(lum_img, droi, proi, broi)  #
+        self.I2d, self.sigI2d = areadata.areaIntegral()
+        xb2, yb2, yb2_err, yb2_pln, self.I1d1, self.sigI1d1 = areadata.lineIntegral(1, self.sc_pln_order2.value())
+        xb3, yb3, yb3_err, yb3_pln, self.I1d0, self.sigI1d0 = areadata.lineIntegral(0, self.sc_pln_order1.value())
+        # plot in canvas2
+        self.figure2.clear()
+        self.figure2.add_subplot(111)
+        ax2 = self.figure2.gca()
+        ax2.errorbar(xb2, yb2, yerr=yb2_err, fmt='ro-', capsize=2.0)
+        ax2.plot(xb2, yb2_pln, 'bo--', markerfacecolor='none')
+        ax2.set_title("1D Integration(2)", fontsize=10)
+        ax2.set_xlabel("y (pixel)")
+        ax2.set_ylabel("Int. (counts)")
+        self.figure2.tight_layout()
+        self.canvas2.draw()
+        # plot in canvas3
+        self.figure3.clear()
+        self.figure3.add_subplot(111)
+        ax3 = self.figure3.gca()
+        ax3.errorbar(xb3, yb3, yerr=yb3_err, fmt='ro-', capsize=2.0)
+        ax3.plot(xb3, yb3_pln, 'bo--', markerfacecolor='none')
+        ax3.set_title("1D Integration(1)", fontsize=10)
+        ax3.set_xlabel("x (pixel)")
+        ax3.set_ylabel("Int. (counts)")
+        self.figure3.tight_layout()
+        self.canvas3.draw()
 
     def getRoiValues(self):
         dxc = self.sc_dxc.value()
@@ -460,13 +489,61 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         return (dxc, dyc, dxw, dyw), (pxc, pyc, pxw, pyw), (bxc, byc, bxw, byw)
 
     def OnMouseMove(self, event):
-        print "Mouse moved."
+        if self.imgArray.any():
+            if event.inaxes:
+                ix, iy = event.xdata, event.ydata
+                iz = self.imgArray[np.int(round(iy)), np.int(round(ix))]
+                self.setStatusTip("p=(" + str(int(round(ix))) + ', ' + str(int(round(iy))) + "), I=" + str(iz))
+                if self.mouse1_is_pressed == True:
+                    xw = ix - self.mousex0
+                    yw = iy - self.mousey0
+                    ax = self.figure1.gca()
+                    rect = Rectangle((self.mousex0, self.mousey0), xw, yw, linestyle='solid', color='magenta',
+                                     fill=True, alpha=0.4)
+                    ax.add_patch(rect)
+                    for item in ax.findobj(match=Rectangle)[:-2]:
+                        item.remove()
+                    self.canvas1.draw()
 
     def OnMousePress(self, event):
-        print "Mouse was pressed."
+        if event.button == 1 and event.xdata and event.ydata:
+            self.mouse1_is_pressed = True
+            self.mousex0 = event.xdata
+            self.mousey0 = event.ydata
+        elif event.button == 3 and event.xdata and event.ydata:
+            self.mouse3_is_pressed = True
+        else:
+            pass
 
     def OnMouseRelease(self, event):
-        print "Mouse was released."
+        try:
+            if event.button == 1:
+                self.mouse1_is_pressed = False
+                self.mousex1 = event.xdata
+                self.mousey1 = event.ydata
+                self.sc_dxc.setValue(int(abs(self.mousex1 + self.mousex0) / 2))
+                self.sc_dyc.setValue(int(abs(self.mousey1 + self.mousey0) / 2))
+                self.sc_pxc.setValue(int(abs(self.mousex1 + self.mousex0) / 2))
+                self.sc_pyc.setValue(int(abs(self.mousey1 + self.mousey0) / 2))
+                self.sc_bxc.setValue(int(abs(self.mousex1 + self.mousex0) / 2))
+                self.sc_byc.setValue(int(abs(self.mousey1 + self.mousey0) / 2))
+
+                if abs(self.mousex1 - self.mousex0) < 1 or abs(self.mousey1 - self.mousey0) < 1:
+                    pass
+                else:
+                    self.sc_dxw.setValue(int(abs(self.mousex1 - self.mousex0)))
+                    self.sc_dyw.setValue(int(abs(self.mousey1 - self.mousey0)))
+                    self.sc_pxw.setValue(int(abs(self.mousex1 - self.mousex0) * 0.3))
+                    self.sc_pyw.setValue(int(abs(self.mousey1 - self.mousey0) * 0.3))
+                    self.sc_bxw.setValue(int(abs(self.mousex1 - self.mousex0) * 0.6))
+                    self.sc_byw.setValue(int(abs(self.mousey1 - self.mousey0) * 0.6))
+            elif event.button == 3:
+                self.mouse3_is_pressed = False
+                self.sc_dxw.setValue(self.sc_dxw.GetValue() * 1.25)
+                self.sc_dyw.setValue(self.sc_dyw.GetValue() * 1.25)
+            self.RedrawImage()
+        except:
+            print "Error"
 
 
 def main():
