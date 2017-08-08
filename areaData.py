@@ -40,9 +40,11 @@ class AreaData(object):
         byc = broi[1]
         bxw = broi[2]
         byw = broi[3]
+
         if pxc - pxw / 2 < bxc - bxw / 2 or pxc + pxw / 2 > bxc + bxw / 2 or pyc - pyw / 2 < byc - byw / 2 or pyc + pyw / 2 > byc + byw / 2:
             raise ValidataionError("Vertices of peak area box must stay within Background area.")
             return
+
         self.dx_ndx = [int(round(dxc - dxw / 2)), int(round(dxc + dxw / 2)) + 1]
         self.dy_ndx = [int(round(dyc - dyw / 2)), int(round(dyc + dyw / 2)) + 1]
         self.px_ndx = [int(round(pxc - pxw / 2)), int(round(pxc + pxw / 2)) + 1]
