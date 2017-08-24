@@ -18,6 +18,7 @@ from PIL import Image
 import numpy as np
 from matplotlib.patches import Rectangle
 from areaData import AreaData
+from specReader import ReadSpec
 
 # ---------------------------------------------------------------------------------------------------------------------#
 
@@ -28,8 +29,10 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.setGeometry(50, 50, 1500, 800)
         self.setWindowTitle("Area Data Analysis")
         self.setMinimumSize(1000, 650)
+        self.readSpec = ReadSpec(self)
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
+        self.workDirOpen = False
         self.createMenus()
         self.ControlDockWidget()
 
@@ -43,6 +46,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.replacing_pixels = []
         self.efficiency_on = False
         self.mouse1_is_pressed = False
+        self.dir = None
 
         # File list widgets
         self.fileListTitle = QLabel("Image files to load")
@@ -70,10 +74,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.canvas2.setParent(self.centralWidget)
         self.canvas3 = FigureCanvas(self.figure3)
         self.canvas3.setParent(self.centralWidget)
-        self.canvas4 = FigureCanvas(self.figure4)
-        self.canvas4.setParent(self.centralWidget)
-        self.canvas5 = FigureCanvas(self.figure5)
-        self.canvas5.setParent(self.centralWidget)
 
         self.log = QTextEdit()
 
@@ -82,25 +82,10 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         gLayout.addWidget(self.log, 0, 1)
         gLayout.addWidget(self.canvas2, 1, 0)
         gLayout.addWidget(self.canvas3, 1, 1)
-        gLayout.addWidget(self.canvas4, 2, 0)
-        gLayout.addWidget(self.canvas5, 2, 1)
-
-        # Save buttons
-        self.saveAndNextBtn = QPushButton("Save and Next")
-        self.saveBtn = QPushButton("Save")
-        self.nextBtn = QPushButton("Next")
-        self.saveAsBtn = QPushButton("Save As")
-
-        hBox_save = QHBoxLayout()
-        hBox_save.addWidget(self.saveAndNextBtn)
-        hBox_save.addWidget(self.saveBtn)
-        hBox_save.addWidget(self.nextBtn)
-        hBox_save.addWidget(self.saveAsBtn)
 
 
         vBox_right = QVBoxLayout()
         vBox_right.addLayout(gLayout)
-        vBox_right.addLayout(hBox_save)
 
         # Adding to the central widget
         hBox_central = QHBoxLayout()
@@ -112,10 +97,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.fileListBox.itemDoubleClicked.connect(self.OnListSelected)
         self.removeFileBtn.clicked.connect(self.OnRemoveFile)
         self.removeAllFileBtn.clicked.connect(self.OnRemoveAllFiles)
-        self.saveAsBtn.clicked.connect(self.OnSaveAs)
-        self.saveBtn.clicked.connect(self.OnSave)
-        self.nextBtn.clicked.connect(self.OnNext)
-        self.saveAndNextBtn.clicked.connect(self.OnSaveNext)
         self.resetRoiBtn.clicked.connect(self.OnResetDataROI)
         self.sc_dxc.valueChanged.connect(self.RedrawImage)
         self.sc_dyc.valueChanged.connect(self.RedrawImage)
@@ -141,7 +122,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
         # Controls
         self.resetRoiBtn = QPushButton("Reset")
-        self.sc_dxc = QSpinBox(self)
+        self.sc_dxc = QSpinBox()
         self.sc_dxc.setMaximumSize(65, 30)
         self.sc_dyc = QSpinBox()
         self.sc_dyc.setMaximumSize(65, 30)
@@ -171,12 +152,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.sc_pln_order2 = QSpinBox()
         self.sc_pln_order2.setRange(1, 5)
         self.sc_pln_order2.setValue(1)
-        self.hkl_H = QLineEdit()
-        self.hkl_K = QLineEdit()
-        self.hkl_L = QLineEdit()
-        self.energy = QLineEdit()
-        self.mon = QLineEdit()
-        self.trans = QLineEdit()
         spacer = QFrame()
         spacer.setFrameShape(QFrame.HLine)
         spacer1 = QFrame()
@@ -185,8 +160,13 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         spacer2.setFrameShape(QFrame.HLine)
         spacer3 = QFrame()
         spacer3.setFrameShape(QFrame.HLine)
+        spacer4 = QFrame()
+        spacer4.setFrameShape(QFrame.HLine)
+        spacer5 = QFrame()
+        spacer5.setFrameShape(QFrame.HLine)
 
         self.sl_dxc = QSlider(Qt.Horizontal)
+        self.sl_dxc.setTickInterval(3)
         self.sl_dxc.valueChanged.connect(self.sc_dxc.setValue)
         self.sl_dyc = QSlider(Qt.Horizontal)
         self.sl_dyc.valueChanged.connect(self.sc_dyc.setValue)
@@ -304,39 +284,54 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         vBkgd_Layout.addLayout(h12Layout)
         vBkgd_Layout.addWidget(spacer3)
 
-        gLayout_control = QGridLayout()
+        vBox_pln = QVBoxLayout()
+        hBox_pln1 = QHBoxLayout()
+        hBox_pln1.addWidget(QLabel("Background Fit Order 1:"))
+        hBox_pln1.addWidget(self.sc_pln_order1)
+        hBox_pln2 = QHBoxLayout()
+        hBox_pln2.addWidget(QLabel("Background Fit Order 2:"))
+        hBox_pln2.addWidget(self.sc_pln_order2)
+        vBox_pln.addLayout(hBox_pln1)
+        vBox_pln.addLayout(hBox_pln2)
+        vBox_pln.addWidget(spacer4)
 
-        hBox_pln = QHBoxLayout()
-        hBox_pln.addWidget(QLabel("Bkgd Fit Order1"))
-        hBox_pln.addWidget(self.sc_pln_order1)
-        hBox_pln.addWidget(QLabel("Bkgd Fit Order2"))
-        hBox_pln.addWidget(self.sc_pln_order2)
+        self.saveAndNextBtn = QPushButton("Save and Next")
+        self.saveBtn = QPushButton("Save")
+        self.nextBtn = QPushButton("Next")
+        self.saveAsBtn = QPushButton("Save As")
 
-        hBox_hkl1 = QHBoxLayout()
-        hBox_hkl1.addWidget(QLabel("H"))
-        hBox_hkl1.addWidget(self.hkl_H)
-        hBox_hkl1.addWidget(QLabel("K"), alignment=Qt.AlignCenter)
-        hBox_hkl1.addWidget(self.hkl_K)
-        hBox_hkl1.addWidget(QLabel("L"), alignment=Qt.AlignCenter)
-        hBox_hkl1.addWidget(self.hkl_L)
-
-        hBox_hkl2 = QHBoxLayout()
-        hBox_hkl2.addWidget(QLabel("Energy"), alignment=Qt.AlignCenter)
-        hBox_hkl2.addWidget(self.energy)
-        hBox_hkl2.addWidget(QLabel("MON"), alignment=Qt.AlignCenter)
-        hBox_hkl2.addWidget(self.mon)
-        hBox_hkl2.addWidget(QLabel("Trans"), alignment=Qt.AlignCenter)
-        hBox_hkl2.addWidget(self.trans)
-
+        #  Save buttons
+        hBox_save1 = QHBoxLayout()
+        hBox_save2 = QHBoxLayout()
+        hBox_save1.addWidget(self.saveBtn)
+        hBox_save1.addWidget(self.nextBtn)
+        hBox_save2.addWidget(self.saveAsBtn)
+        hBox_save2.addWidget(self.saveAndNextBtn)
+        self.saveAsBtn.clicked.connect(self.OnSaveAs)
+        self.saveBtn.clicked.connect(self.OnSave)
+        self.nextBtn.clicked.connect(self.OnNext)
+        self.saveAndNextBtn.clicked.connect(self.OnSaveNext)
         dockLayout = QVBoxLayout()
-        dockLayout.addLayout(vROI_Layout)
-        dockLayout.addLayout(vPeak_Layout)
-        dockLayout.addLayout(vBkgd_Layout)
-        dockLayout.addLayout(hBox_pln)
-        dockLayout.addLayout(hBox_hkl1)
-        dockLayout.addLayout(hBox_hkl2)
-        dockLayout.addWidget(self.resetRoiBtn)
-        dockLayout.addStretch(1)
+
+        if self.workDirOpen == False:
+            dockLayout.addLayout(vROI_Layout)
+            dockLayout.addLayout(vPeak_Layout)
+            dockLayout.addLayout(vBkgd_Layout)
+            dockLayout.addLayout(vBox_pln)
+            dockLayout.addWidget(self.resetRoiBtn)
+            dockLayout.addLayout(hBox_save1)
+            dockLayout.addLayout(hBox_save2)
+            dockLayout.addStretch(1)
+        elif self.workDirOpen == True:
+            dockLayout.addLayout(vROI_Layout)
+            dockLayout.addLayout(vPeak_Layout)
+            dockLayout.addLayout(vBkgd_Layout)
+            dockLayout.addLayout(vBox_pln)
+            dockLayout.addLayout(self.readSpec.SpecDataInfo())
+            dockLayout.addWidget(self.resetRoiBtn)
+            dockLayout.addLayout(hBox_save1)
+            dockLayout.addLayout(hBox_save2)
+            dockLayout.addStretch(1)
 
         widget = QWidget()
         widget.setLayout(dockLayout)
@@ -356,9 +351,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.statusBar.showMessage('Ready', 3000)
 
         self.createActions()
-        self.fileMenu.addAction(self.openImagesAction)
-        self.fileMenu.addAction(self.readMetadataAction)
-        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.openWorkDirAction)
         self.fileMenu.addAction(self.nextAction)
         self.fileMenu.addAction(self.saveAction)
         self.fileMenu.addAction(self.saveAsAction)
@@ -375,13 +368,10 @@ class AreaDetectorAnalysisWindow(QMainWindow):
     def createActions(self):
         """Function that creates the actions used in the menu bar
         """
-        self.openImagesAction = QAction('Open Images', self)
-        self.openImagesAction.setStatusTip('List up the image files to open.')
-        self.openImagesAction.triggered.connect(self.OnOpenImage)
+        self.openWorkDirAction = QAction('Open Work Directory', self)
+        self.openWorkDirAction.setStatusTip('Open the directory with the images and spec file.')
+        self.openWorkDirAction.triggered.connect(self.OnOpenWorkDir)
 
-        self.readMetadataAction = QAction('Read Metadata', self)
-        self.readMetadataAction.setStatusTip('Read a metadata file.')
-        self.readMetadataAction.triggered.connect(self.OnReadMetaData)
 
         self.saveAsAction = QAction("Save As", self)
         self.saveAsAction.setStatusTip("Save the result.")
@@ -423,24 +413,40 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.selectNewDataColumnAction.setStatusTip("Select New Data Columns.")
         self.selectNewDataColumnAction.triggered.connect(self.OnSelectDataColumn)
 
-    def OnOpenImage(self):
-        dir = QFileDialog.getExistingDirectory(caption="Choose directory")
+    def OnOpenWorkDir(self):
+        try:
+            self.dir = QFileDialog.getExistingDirectory(caption="Choose work directory")
 
-        if os.path.isdir(dir):
-            images = os.listdir(dir)
+            if os.path.isdir(self.dir):
+                items = os.listdir(self.dir)
 
-            for img in images:
-                self.fileListBox.addItem(img)
-                if dir.find("/") == 0:
-                    self.fileList.append(dir + '/' + img)
-                elif dir.find("\\") == 0:
-                    self.fileList.append(dir + '\\' + img)
+                for item in items:
+                    if self.dir.find("/") == 0:
+                        path = self.dir + '/' + item
+                    elif self.dir.find("\\") == 0:
+                        path = self.dir + '\\' + item
+                    if os.path.isdir(path):
+                        imgDir = path
+                    elif os.path.isfile(path):
+                        specFile = path
 
-                self.metadataList.append([])
 
+                images = os.listdir(imgDir)
+                for img in images:
+                    self.fileListBox.addItem(img)
+                    if self.dir.find("/") == 0:
+                        self.fileList.append(imgDir + '/' + img)
+                    elif self.dir.find("\\") == 0:
+                        self.fileList.append(imgDir + '\\' + img)
 
-    def OnReadMetaData(self):
-        print "Not ready, yet."
+                self.workDirOpen = True
+                self.readSpec.loadSpec(specFile, imgDir)
+        except:
+            QMessageBox.warning(self, "Error", "Please make sure the work directory follows the correct format.\n\n"
+                                "Directory should contain:\n\n" "1. Folder with images\n2. Spec file")
+            self.fileListBox.clear()
+            self.fileList = []
+
 
     def OnSaveAs(self):
         print "Not ready, yet."
@@ -478,6 +484,11 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.curimg = Image.open(self.fileList[self.imgIndx])
         self.imgArray = np.array(self.curimg)
 
+        self.readSpec.getSpecData(self.imgIndx)
+
+
+
+
         if self.efficiency_on == True:
             self.imgArray = self.imarray / self.efficiencyarray
 
@@ -486,21 +497,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
                 self.imgArray[self.bad_pixels[i][1], self.bad_pixels[i][0]] = \
                     self.imgArray[self.replacing_pixels[i][1], self.replacing_pixels[i][0]]
 
-        if self.metadataList[self.imgIndx]:
-            self.hkl_H.setText(str('%4.3f' % self.metadataList[self.imgIndx][self.Hcol]))
-            self.hkl_K.setText(str('%4.3f' % self.metadataList[self.imgIndx][self.Kcol]))
-            self.hkl_L.setText(str('%4.3f' % self.metadataList[self.imgIndx][self.Lcol]))
-            self.energy.setText(str('%6.4f' % self.metadataList[self.imgIndx][self.Ecol]))
-            self.mon.setText(str('%12d' % self.metadataList[self.imgIndx][self.Mcol]))
-            self.trans.setText(str('%6.5e' % self.metadataList[self.imgIndx][self.Tcol]))
-        elif not self.metadataList[self.imgIndx]:
-            self.hkl_H.setText("nan")
-            self.hkl_K.setText("nan")
-            self.hkl_L.setText("nan")
-            self.energy.setText("nan")
-            self.mon.setText("nan")
-            self.trans.setText("nan")
-
         self.RedrawImage()
 
     def RedrawImage(self):
@@ -508,16 +504,17 @@ class AreaDetectorAnalysisWindow(QMainWindow):
             if self.imgArray.any():
                 self.resetRoiRange()
                 ih, iw = self.imgArray.shape
-
                 droi, proi, broi = self.getRoiValues()
+
                 if droi == (0, 0, 0, 0):
                     self.sc_dxc.setValue(iw / 2)
                     self.sc_dyc.setValue(ih / 2)
                     self.sc_dxw.setValue(iw)
                     self.sc_dyw.setValue(ih)
-                    self.RedrawImage()
-                    return
-                else:
+                    droi, proi, broi = self.getRoiValues()
+
+                boundsError = self.checkingBounds()
+                if boundsError == False:
                     h, bins = np.histogram(self.imgArray)
                     vmin = bins[0]
                     vmax = bins[-1]
@@ -532,7 +529,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
                     by = [broi[1] - broi[3] / 2., broi[1] - broi[3] / 2., broi[1] + broi[3] / 2., broi[1] + broi[3] / 2.,
                           broi[1] - broi[3] / 2.]
                     self.figure1.clear()
-                    ax = self.figure1.add_subplot(111)  # this is important line to make image visible
+                    ax = self.figure1.add_subplot(111)
                     ax.imshow(self.imgArray, interpolation='none', vmin=vmin, vmax=vmax)
                     ax.set_xlim(dxlim)
                     ax.set_ylim(dylim)
@@ -547,22 +544,45 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         except IndexError:
             print "Make sure to stay in between the pictures bounds."
 
+    def checkingBounds(self):
+        droi, proi, broi = self.getRoiValues()
+
+        pxc = proi[0]
+        pyc = proi[1]
+        pxw = proi[2]
+        pyw = proi[3]
+        bxc = broi[0]
+        byc = broi[1]
+        bxw = broi[2]
+        byw = broi[3]
+
+        if pxc - pxw / 2 < bxc - bxw / 2 or pxc + pxw / 2 > bxc + bxw / 2 or pyc - pyw / 2 < byc - byw / 2 or\
+                                pyc + pyw / 2 > byc + byw / 2:
+            return True
+        else:
+            return False
+
+    def checkingValue(self):
+        error = self.checkingBounds()
+
+        if error == False:
+            pass
 
     def OnRemoveFile(self):
         if len(self.fileList) != 0:
             indx = self.fileListBox.currentRow()
             self.fileListBox.takeItem(indx)
             self.fileList.remove(self.fileList[indx])
-            self.metadataList.remove(self.metadataList[indx])
-            if len(self.fileList) == 0:
-                self.is_metadata_read = False
+
+            for n in self.readSpec.specInfoValue:
+                if isinstance(n, list):
+                    n.pop(indx)
+
 
     def OnRemoveAllFiles(self):
         if len(self.fileList) != 0:
             self.fileListBox.clear()
             self.fileList = []
-            self.metadataList = []
-            self.is_metadata_read = False
 
     def OnResetDataROI(self):
         if self.imgArray.any():
@@ -588,7 +608,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
     def resetRoiRange(self):
         ih, iw = self.imgArray.shape
-        print ih, iw
         self.sc_dxc.setRange(0, iw)
         self.sc_dyc.setRange(0, ih)
         self.sc_dxw.setRange(0, iw)
@@ -658,7 +677,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         return (dxc, dyc, dxw, dyw), (pxc, pyc, pxw, pyw), (bxc, byc, bxw, byw)
 
     def OnMouseMove(self, event):
-        print event.inaxes
         if self.imgArray.any():
             if event.inaxes:
                 ix, iy = event.xdata, event.ydata
@@ -676,7 +694,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
                     self.canvas1.draw()
 
     def OnMousePress(self, event):
-        print event.button
         if event.button == 1 and event.inaxes:
             self.mouse1_is_pressed = True
             self.mousex0 = event.xdata
