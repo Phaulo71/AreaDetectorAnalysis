@@ -16,11 +16,19 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pylab as plt
 from PIL import Image
 import numpy as np
+import time
 from matplotlib.patches import Rectangle
 from areaData import AreaData
 from specReader import ReadSpec
 
 # ---------------------------------------------------------------------------------------------------------------------#
+class RedirectText(QObject):
+    def __init__(self, log):
+        self.out = log
+
+    def write(self, string):
+        self.out.insertPlainText(string)
+
 
 class AreaDetectorAnalysisWindow(QMainWindow):
     """Main window class"""
@@ -37,7 +45,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.ControlDockWidget()
 
         self.fileList = []
-        self.metadataList = []
         self.is_metadata_read = False
         self.imgArray = np.array(0)
         self.savedatafile = None
@@ -76,6 +83,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.canvas3.setParent(self.centralWidget)
 
         self.log = QTextEdit()
+        self.log.setReadOnly(True)
 
         gLayout = QGridLayout()
         gLayout.addWidget(self.canvas1, 0, 0)
@@ -113,6 +121,13 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.canvas1.mpl_connect('motion_notify_event', self.OnMouseMove)
         self.canvas1.mpl_connect('button_press_event', self.OnMousePress)
         self.canvas1.mpl_connect('button_release_event', self.OnMouseRelease)
+
+        redir = RedirectText(self.log)
+        sys.stdout = redir
+        redir2 = RedirectText(self.log)
+        sys.stderr = redir2
+
+        print("AreaDetectorAnalysis: " + time.ctime())
 
     def ControlDockWidget(self):
         self.controlDockWidget = QDockWidget("Controls", self)
@@ -356,8 +371,10 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.fileMenu.addAction(self.saveAction)
         self.fileMenu.addAction(self.saveAsAction)
         self.fileMenu.addAction(self.saveAndNextAction)
+        self.exportMenu = self.fileMenu.addMenu("Export")
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.exitAction)
+        self.exportMenu.addAction(self.pixelDataAction)
         self.badPixelsMenu.addAction(self.badPixelsOnAction)
         self.badPixelsMenu.addAction(self.badPixelsOffAction)
         self.flatfieldMenu.addAction(self.flatfieldOnAction)
@@ -393,6 +410,10 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.exitAction.setStatusTip("Exits the program.")
         self.exitAction.triggered.connect(self.OnExit)
 
+        self.pixelDataAction = QAction("Pixel Data", self)
+        self.pixelDataAction.setStatusTip("Exports file with pixel data.")
+        self.pixelDataAction.triggered.connect(self.PixelDataDialog)
+
         self.badPixelsOnAction = QAction("On", self)
         self.badPixelsOnAction.setStatusTip("Toggle on, bad pixel correction.")
         self.badPixelsOnAction.triggered.connect(self.OnBadPixelCorrection)
@@ -415,6 +436,9 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
     def OnOpenWorkDir(self):
         try:
+            self.fileList = []
+            self.imgList = []
+
             self.dir = QFileDialog.getExistingDirectory(caption="Choose work directory")
 
             if os.path.isdir(self.dir):
@@ -434,6 +458,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
                 images = os.listdir(imgDir)
                 for img in images:
                     self.fileListBox.addItem(img)
+                    self.imgList.append(img)
                     if self.dir.find("/") == 0:
                         self.fileList.append(imgDir + '/' + img)
                     elif self.dir.find("\\") == 0:
@@ -573,6 +598,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
             indx = self.fileListBox.currentRow()
             self.fileListBox.takeItem(indx)
             self.fileList.remove(self.fileList[indx])
+            self.imgList.pop(indx)
 
             for n in self.readSpec.specInfoValue:
                 if isinstance(n, list):
@@ -634,6 +660,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.sl_byw.setRange(0, ih)
 
     def areaIntegrationShow(self,lum_img,droi,proi,broi):
+        self.yPixelData = []
+        self.xPixelData = []
         areadata = AreaData(lum_img, droi, proi, broi)  #
         self.I2d, self.sigI2d = areadata.areaIntegral()
         xb2, yb2, yb2_err, yb2_pln, self.I1d1, self.sigI1d1 = areadata.lineIntegral(1, self.sc_pln_order2.value())
@@ -644,6 +672,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         ax2 = self.figure2.gca()
         ax2.errorbar(xb2, yb2, yerr=yb2_err, fmt='ro-', capsize=2.0)
         ax2.plot(xb2, yb2_pln, 'bo--', markerfacecolor='none')
+        self.yPixelData.append(xb2)
+        self.yPixelData.append(yb2)
         ax2.set_title("1D Integration(2)", fontsize=10)
         ax2.set_xlabel("y (pixel)")
         ax2.set_ylabel("Int. (counts)")
@@ -655,6 +685,10 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         ax3 = self.figure3.gca()
         ax3.errorbar(xb3, yb3, yerr=yb3_err, fmt='ro-', capsize=2.0)
         ax3.plot(xb3, yb3_pln, 'bo--', markerfacecolor='none')
+        print 'X Pixel'
+        print xb3
+        print yb3
+        print self.imgList[self.imgIndx]
         ax3.set_title("1D Integration(1)", fontsize=10)
         ax3.set_xlabel("x (pixel)")
         ax3.set_ylabel("Int. (counts)")
@@ -732,6 +766,44 @@ class AreaDetectorAnalysisWindow(QMainWindow):
             self.RedrawImage()
         except:
             print "Error"
+
+    def PixelDataDialog(self):
+        self.pixelDataDialog = QDialog(self)
+        dialogBox = QVBoxLayout()
+        buttonLayout = QHBoxLayout()
+        vBox = QVBoxLayout()
+
+        groupBox = QGroupBox("Select pixel data")
+
+        self.xPixelReportCb = QRadioButton("X pixel")
+        self.yPixelReportCb = QRadioButton("Y pixel")
+        self.allPixelReportCb = QRadioButton("X && Y pixels")
+
+        vBox.addWidget(self.xPixelReportCb)
+        vBox.addWidget(self.yPixelReportCb)
+        vBox.addWidget(self.allPixelReportCb)
+        groupBox.setLayout(vBox)
+
+        ok = QPushButton("Ok")
+        cancel = QPushButton('Cancel')
+
+        # ok.clicked.connect()
+        cancel.clicked.connect(self.pixelDataDialog.close)
+
+        buttonLayout.addWidget(cancel)
+        buttonLayout.addStretch(1)
+        buttonLayout.addWidget(ok)
+
+        dialogBox.addWidget(groupBox)
+        dialogBox.addLayout(buttonLayout)
+
+        self.pixelDataDialog.setWindowTitle("Export Pixel Data")
+        self.pixelDataDialog.setLayout(dialogBox)
+        self.pixelDataDialog.resize(200, 50)
+        self.pixelDataDialog.exec_()
+
+    def PrintPixelReport(self):
+        pass
 
 
 def main():

@@ -174,10 +174,6 @@ class ReadSpec:
 
         return vBoxLayout
 
-
-
-
-
     def getEnergy(self):
         data = self.scans[str(self.scan)].raw
         UE = data.split("#UE")
