@@ -20,6 +20,7 @@ import time
 from matplotlib.patches import Rectangle
 from areaData import AreaData
 from specReader import ReadSpec
+import csv
 
 # ---------------------------------------------------------------------------------------------------------------------#
 class RedirectText(QObject):
@@ -122,10 +123,10 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.canvas1.mpl_connect('button_press_event', self.OnMousePress)
         self.canvas1.mpl_connect('button_release_event', self.OnMouseRelease)
 
-        redir = RedirectText(self.log)
+        """redir = RedirectText(self.log)
         sys.stdout = redir
         redir2 = RedirectText(self.log)
-        sys.stderr = redir2
+        sys.stderr = redir2"""
 
         print("AreaDetectorAnalysis: " + time.ctime())
 
@@ -659,7 +660,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.sl_bxw.setRange(0, iw)
         self.sl_byw.setRange(0, ih)
 
-    def areaIntegrationShow(self,lum_img,droi,proi,broi):
+    def areaIntegrationShow(self, lum_img, droi, proi, broi):
         self.yPixelData = []
         self.xPixelData = []
         areadata = AreaData(lum_img, droi, proi, broi)  #
@@ -685,10 +686,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         ax3 = self.figure3.gca()
         ax3.errorbar(xb3, yb3, yerr=yb3_err, fmt='ro-', capsize=2.0)
         ax3.plot(xb3, yb3_pln, 'bo--', markerfacecolor='none')
-        print 'X Pixel'
-        print xb3
-        print yb3
-        print self.imgList[self.imgIndx]
+        self.xPixelData.append(xb3)
+        self.xPixelData.append(yb3)
         ax3.set_title("1D Integration(1)", fontsize=10)
         ax3.set_xlabel("x (pixel)")
         ax3.set_ylabel("Int. (counts)")
@@ -787,7 +786,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         ok = QPushButton("Ok")
         cancel = QPushButton('Cancel')
 
-        # ok.clicked.connect()
+        ok.clicked.connect(self.CreatePixelReport)
         cancel.clicked.connect(self.pixelDataDialog.close)
 
         buttonLayout.addWidget(cancel)
@@ -802,8 +801,54 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.pixelDataDialog.resize(200, 50)
         self.pixelDataDialog.exec_()
 
+    def CreatePixelReport(self):
+        if self.xPixelReportCb.isChecked() or self.yPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
+            self.reportFile, self.reportFileFilter = QFileDialog.getSaveFileName(self, "Save Report", "",
+                                                                                 ".txt")
+            if self.reportFile != "":
+                self.reportFile += self.reportFileFilter
+                self.PrintPixelReport()
+                self.pixelDataDialog.close()
+
+
     def PrintPixelReport(self):
-        pass
+            xReportData = np.zeros((len(self.xPixelData[0]), 0))
+            yReportData = np.zeros((len(self.yPixelData[0]), 0))
+            if len(self.xPixelData[0]) >= len(self.yPixelData[0]):
+                maxLength = len(self.xPixelData[0])
+            elif len(self.xPixelData[0]) < len(self.yPixelData[0]):
+                maxLength = len(self.yPixelData[0])
+
+            reportData = []
+            header = "#H "
+
+            if self.xPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
+                header += "xPixel xCount "
+                x = np.reshape(self.xPixelData[0], ((len(self.xPixelData[0])), 1))  # Enables array to be appended
+                xCount = np.reshape(self.xPixelData[1], ((len(self.xPixelData[1])), 1))  # Enables array to be appended
+                xReportData = np.concatenate((xReportData, x, xCount), axis=1)
+                reportData.append(self.xPixelData[0])
+                reportData.append(self.xPixelData[1])
+
+            if self.yPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
+                header += "yPixel yCount"
+                y = np.reshape(self.yPixelData[0], ((len(self.yPixelData[0])), 1))  # Enables array to be appended
+                yCount = np.reshape(self.yPixelData[1], ((len(self.yPixelData[1])), 1))  # Enables array to be appended
+                yReportData = np.concatenate((yReportData, y, yCount), axis=1)
+                reportData.append(self.yPixelData[0])
+                reportData.append(self.yPixelData[1])
+
+            # Writes to sheet
+            print reportData
+            print len(reportData)
+            print len(reportData[0])
+            print len(reportData[2])
+            print maxLength
+
+            """open(self.reportFile, "w") as f:
+                writer = csv.writer(f, delimiter=str(''))
+                f.write(header + 'n')
+                writer.writerows(reportData)"""
 
 
 def main():
