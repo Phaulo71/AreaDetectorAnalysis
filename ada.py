@@ -46,6 +46,9 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.ControlDockWidget()
 
         self.fileList = []
+        self.yPixelData = []
+        self.xPixelData = []
+        self.imgIndx = -1
         self.is_metadata_read = False
         self.imgArray = np.array(0)
         self.savedatafile = None
@@ -106,27 +109,14 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.fileListBox.itemDoubleClicked.connect(self.OnListSelected)
         self.removeFileBtn.clicked.connect(self.OnRemoveFile)
         self.removeAllFileBtn.clicked.connect(self.OnRemoveAllFiles)
-        self.resetRoiBtn.clicked.connect(self.OnResetDataROI)
-        self.sc_dxc.valueChanged.connect(self.RedrawImage)
-        self.sc_dyc.valueChanged.connect(self.RedrawImage)
-        self.sc_dxw.valueChanged.connect(self.RedrawImage)
-        self.sc_dyw.valueChanged.connect(self.RedrawImage)
-        self.sc_pxc.valueChanged.connect(self.RedrawImage)
-        self.sc_pyc.valueChanged.connect(self.RedrawImage)
-        self.sc_pxw.valueChanged.connect(self.RedrawImage)
-        self.sc_pyw.valueChanged.connect(self.RedrawImage)
-        self.sc_bxc.valueChanged.connect(self.RedrawImage)
-        self.sc_byc.valueChanged.connect(self.RedrawImage)
-        self.sc_bxw.valueChanged.connect(self.RedrawImage)
-        self.sc_byw.valueChanged.connect(self.RedrawImage)
         self.canvas1.mpl_connect('motion_notify_event', self.OnMouseMove)
         self.canvas1.mpl_connect('button_press_event', self.OnMousePress)
         self.canvas1.mpl_connect('button_release_event', self.OnMouseRelease)
 
-        """redir = RedirectText(self.log)
+        redir = RedirectText(self.log)
         sys.stdout = redir
         redir2 = RedirectText(self.log)
-        sys.stderr = redir2"""
+        sys.stderr = redir2
 
         print("AreaDetectorAnalysis: " + time.ctime())
 
@@ -220,6 +210,22 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.sc_byc.valueChanged.connect(self.sl_byc.setValue)
         self.sc_bxw.valueChanged.connect(self.sl_bxw.setValue)
         self.sc_byw.valueChanged.connect(self.sl_byw.setValue)
+
+        # Redrawing image
+        self.sc_dxc.valueChanged.connect(self.RedrawImage)
+        self.sc_dyc.valueChanged.connect(self.RedrawImage)
+        self.sc_dxw.valueChanged.connect(self.RedrawImage)
+        self.sc_dyw.valueChanged.connect(self.RedrawImage)
+        self.sc_pxc.valueChanged.connect(self.RedrawImage)
+        self.sc_pyc.valueChanged.connect(self.RedrawImage)
+        self.sc_pxw.valueChanged.connect(self.RedrawImage)
+        self.sc_pyw.valueChanged.connect(self.RedrawImage)
+        self.sc_bxc.valueChanged.connect(self.RedrawImage)
+        self.sc_byc.valueChanged.connect(self.RedrawImage)
+        self.sc_bxw.valueChanged.connect(self.RedrawImage)
+        self.sc_byw.valueChanged.connect(self.RedrawImage)
+
+        self.resetRoiBtn.clicked.connect(self.OnResetDataROI)
 
         vROI_Layout = QVBoxLayout()
         ROI_Label = QLabel("Data ROI")
@@ -380,7 +386,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.badPixelsMenu.addAction(self.badPixelsOffAction)
         self.flatfieldMenu.addAction(self.flatfieldOnAction)
         self.flatfieldMenu.addAction(self.badPixelsOffAction)
-        self.optionsMenu.addAction(self.selectNewDataColumnAction)
 
 
     def createActions(self):
@@ -431,10 +436,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.flatfieldOffAction.setStatusTip("Toggle off, pixel by pixel efficiency correction")
         self.flatfieldOffAction.triggered.connect(self.OffFlatfieldCorrection)
 
-        self.selectNewDataColumnAction = QAction("Select New Data Column", self)
-        self.selectNewDataColumnAction.setStatusTip("Select New Data Columns.")
-        self.selectNewDataColumnAction.triggered.connect(self.OnSelectDataColumn)
-
     def OnOpenWorkDir(self):
         try:
             self.fileList = []
@@ -469,19 +470,27 @@ class AreaDetectorAnalysisWindow(QMainWindow):
                 self.readSpec.loadSpec(specFile, imgDir)
         except:
             QMessageBox.warning(self, "Error", "Please make sure the work directory follows the correct format.\n\n"
-                                "Directory should contain:\n\n" "1. Folder with images\n2. Spec file")
+                                "Directory should contain:\n\n" "1. Folder with images\n2. Spec file"
+                                "\n\nNote: The images folder should be named the number of the scan. For example 64.")
             self.fileListBox.clear()
             self.fileList = []
+            self.imgList = []
 
 
     def OnSaveAs(self):
+        """Ask Jong what he wants to save"""
         print "Not ready, yet."
 
     def OnSave(self):
+        """Ask Jong what he wants to save."""
         print "Not ready, yet."
 
     def OnNext(self):
-        print "Not ready, yet."
+        print self.fileListBox.count()
+        indx = self.imgIndx + 1
+        print indx
+        self.fileListBox.setCurrentRow(indx)
+        self.OnListSelected()
 
     def OnSaveNext(self):
         self.OnSave()
@@ -491,19 +500,18 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.close()
 
     def OnBadPixelCorrection(self):
+        """Ask Jong what file is required for this"""
         print "Not ready, yet"
 
     def OffBadPixelCorrection(self):
-        print "Not ready, yet"
+        self.bad_pixels_on = False
 
     def OnFlatfieldCorrection(self):
+        """ Ask Jong what file is needed here."""
         print "Not ready, yet"
 
     def OffFlatfieldCorrection(self):
-        print "Not ready, yet"
-
-    def OnSelectDataColumn(self):
-        print "Not ready."
+        self.efficiency_on = False
 
     def OnListSelected(self):
         self.imgIndx = self.fileListBox.currentRow()
@@ -511,9 +519,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.imgArray = np.array(self.curimg)
 
         self.readSpec.getSpecData(self.imgIndx)
-
-
-
 
         if self.efficiency_on == True:
             self.imgArray = self.imarray / self.efficiencyarray
@@ -572,7 +577,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
     def checkingBounds(self):
         droi, proi, broi = self.getRoiValues()
-
+        print proi
+        print broi
         pxc = proi[0]
         pyc = proi[1]
         pxw = proi[2]
@@ -581,11 +587,14 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         byc = broi[1]
         bxw = broi[2]
         byw = broi[3]
+        print  pxc - pxw / 2
 
         if pxc - pxw / 2 < bxc - bxw / 2 or pxc + pxw / 2 > bxc + bxw / 2 or pyc - pyw / 2 < byc - byw / 2 or\
                                 pyc + pyw / 2 > byc + byw / 2:
+            print "True"
             return True
         else:
+            print "False"
             return False
 
     def checkingValue(self):
@@ -663,6 +672,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
     def areaIntegrationShow(self, lum_img, droi, proi, broi):
         self.yPixelData = []
         self.xPixelData = []
+        self.imageName = self.imgList[self.imgIndx]
         areadata = AreaData(lum_img, droi, proi, broi)  #
         self.I2d, self.sigI2d = areadata.areaIntegral()
         xb2, yb2, yb2_err, yb2_pln, self.I1d1, self.sigI1d1 = areadata.lineIntegral(1, self.sc_pln_order2.value())
@@ -738,7 +748,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
     def OnMouseRelease(self, event):
         try:
-            if event.button == 1:
+            if event.button == 1 and event.inaxes:
                 self.mouse1_is_pressed = False
                 self.mousex1 = event.xdata
                 self.mousey1 = event.ydata
@@ -802,18 +812,17 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.pixelDataDialog.exec_()
 
     def CreatePixelReport(self):
-        if self.xPixelReportCb.isChecked() or self.yPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
-            self.reportFile, self.reportFileFilter = QFileDialog.getSaveFileName(self, "Save Report", "",
-                                                                                 ".txt")
-            if self.reportFile != "":
-                self.reportFile += self.reportFileFilter
-                self.PrintPixelReport()
-                self.pixelDataDialog.close()
+        if len(self.xPixelData) != 0:
+            if self.xPixelReportCb.isChecked() or self.yPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
+                self.reportFile, self.reportFileFilter = QFileDialog.getSaveFileName(self, "Save Report", "",
+                                                                                     ".txt")
+                if self.reportFile != "":
+                    self.reportFile += self.reportFileFilter
+                    self.PrintPixelReport()
+                    self.pixelDataDialog.close()
 
 
     def PrintPixelReport(self):
-            xReportData = np.zeros((len(self.xPixelData[0]), 0))
-            yReportData = np.zeros((len(self.yPixelData[0]), 0))
             if len(self.xPixelData[0]) >= len(self.yPixelData[0]):
                 maxLength = len(self.xPixelData[0])
             elif len(self.xPixelData[0]) < len(self.yPixelData[0]):
@@ -824,31 +833,27 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
             if self.xPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
                 header += "xPixel xCount "
-                x = np.reshape(self.xPixelData[0], ((len(self.xPixelData[0])), 1))  # Enables array to be appended
-                xCount = np.reshape(self.xPixelData[1], ((len(self.xPixelData[1])), 1))  # Enables array to be appended
-                xReportData = np.concatenate((xReportData, x, xCount), axis=1)
                 reportData.append(self.xPixelData[0])
                 reportData.append(self.xPixelData[1])
 
             if self.yPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
                 header += "yPixel yCount"
-                y = np.reshape(self.yPixelData[0], ((len(self.yPixelData[0])), 1))  # Enables array to be appended
-                yCount = np.reshape(self.yPixelData[1], ((len(self.yPixelData[1])), 1))  # Enables array to be appended
-                yReportData = np.concatenate((yReportData, y, yCount), axis=1)
                 reportData.append(self.yPixelData[0])
                 reportData.append(self.yPixelData[1])
 
             # Writes to sheet
-            print reportData
-            print len(reportData)
-            print len(reportData[0])
-            print len(reportData[2])
-            print maxLength
+            file = open(self.reportFile, "w")
+            file.write("#C " + self.imageName + "\n")
+            file.write(header + "\n")
+            j = 0
+            while j < maxLength:
+                string = ''
+                for s in reportData:
+                    if len(s) > j:
+                        string += "{:5}".format(str(s[j])) + " "
+                j += 1
+                file.write(string + "\n")
 
-            """open(self.reportFile, "w") as f:
-                writer = csv.writer(f, delimiter=str(''))
-                f.write(header + 'n')
-                writer.writerows(reportData)"""
 
 
 def main():
