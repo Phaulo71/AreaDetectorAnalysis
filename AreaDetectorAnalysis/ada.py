@@ -6,24 +6,26 @@ See LICENSE file.
 """
 # ---------------------------------------------------------------------------------------------------------------------#
 from __future__ import unicode_literals
-import sys
-import os
 
+import os
+import sys
+import time
+
+import matplotlib.pylab as plt
+import numpy as np
+from PIL import Image
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib.pylab as plt
-from PIL import Image
-import numpy as np
-import time
 from matplotlib.patches import Rectangle
-from areaData import AreaData
-from specReader import ReadSpec
-import csv
+
+from AreaDetectorAnalysis.source.areaData import AreaData
+from AreaDetectorAnalysis.source.specReader import ReadSpec
+
 
 # ---------------------------------------------------------------------------------------------------------------------#
 class RedirectText(QObject):
+    """Class to redirect output from console to self.log (QTextEdit widget)"""
     def __init__(self, log):
         self.out = log
 
@@ -121,6 +123,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         print("AreaDetectorAnalysis: " + time.ctime())
 
     def ControlDockWidget(self):
+        """Dock widget on the right side that contains the controls and the spec file info for
+        each image."""
         self.controlDockWidget = QDockWidget("Controls", self)
         self.controlDockWidget.setMaximumWidth(280)
         self.controlDockWidget.setMinimumWidth(280)
@@ -389,7 +393,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
 
     def createActions(self):
-        """Function that creates the actions used in the menu bar
+        """Function that creates the actions used in the menu bar.
         """
         self.openWorkDirAction = QAction('Open Work Directory', self)
         self.openWorkDirAction.setStatusTip('Open the directory with the images and spec file.')
@@ -437,6 +441,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.flatfieldOffAction.triggered.connect(self.OffFlatfieldCorrection)
 
     def OnOpenWorkDir(self):
+        """This method opens the the spec file and the folder with the images.
+        """
         try:
             self.fileList = []
             self.imgList = []
@@ -478,42 +484,53 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
 
     def OnSaveAs(self):
-        """Ask Jong what he wants to save"""
+        """Ask Jong what he wants to save.
+        """
         print "Not ready, yet."
 
     def OnSave(self):
-        """Ask Jong what he wants to save."""
+        """Ask Jong what he wants to save.
+        """
         print "Not ready, yet."
 
     def OnNext(self):
+        """Goes to the next image.
+        """
         print self.fileListBox.count()
         indx = self.imgIndx + 1
         print indx
-        self.fileListBox.setCurrentRow(indx)
-        self.OnListSelected()
+        if indx < len(self.imgArray):
+            self.fileListBox.setCurrentRow(indx)
+            self.OnListSelected()
 
     def OnSaveNext(self):
         self.OnSave()
         self.OnNext()
 
     def OnExit(self):
+        """Exits the program without saving.
+        """
         self.close()
 
     def OnBadPixelCorrection(self):
-        """Ask Jong what file is required for this"""
+        """Ask Jong what file is required for this.
+        """
         print "Not ready, yet"
 
     def OffBadPixelCorrection(self):
         self.bad_pixels_on = False
 
     def OnFlatfieldCorrection(self):
-        """ Ask Jong what file is needed here."""
+        """ Ask Jong what file is needed here.
+        """
         print "Not ready, yet"
 
     def OffFlatfieldCorrection(self):
         self.efficiency_on = False
 
     def OnListSelected(self):
+        """Opens the image double clicked from the QListWidget.
+        """
         self.imgIndx = self.fileListBox.currentRow()
         self.curimg = Image.open(self.fileList[self.imgIndx])
         self.imgArray = np.array(self.curimg)
@@ -531,6 +548,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.RedrawImage()
 
     def RedrawImage(self):
+        """Redraws the image.
+        """
         try:
             if self.imgArray.any():
                 self.resetRoiRange()
@@ -576,6 +595,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
             print "Make sure to stay in between the pictures bounds."
 
     def checkingBounds(self):
+        """Trying to check the bounds before redrawing the image so that the program doesn't crash when
+        the proi is bigger than the broi."""
         droi, proi, broi = self.getRoiValues()
         print proi
         print broi
@@ -598,12 +619,15 @@ class AreaDetectorAnalysisWindow(QMainWindow):
             return False
 
     def checkingValue(self):
+        """Developing other method to check for errors, not ready yet."""
         error = self.checkingBounds()
 
         if error == False:
             pass
 
     def OnRemoveFile(self):
+        """Removes the selected image.
+        """
         if len(self.fileList) != 0:
             indx = self.fileListBox.currentRow()
             self.fileListBox.takeItem(indx)
@@ -616,11 +640,15 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
 
     def OnRemoveAllFiles(self):
+        """Removes all the images.
+        """
         if len(self.fileList) != 0:
             self.fileListBox.clear()
             self.fileList = []
 
     def OnResetDataROI(self):
+        """Resets the roi to its original value.
+        """
         if self.imgArray.any():
             ih, iw = self.imgArray.shape
             print ih, iw
@@ -643,6 +671,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
             self.RedrawImage()
 
     def resetRoiRange(self):
+        """Resets the roi ranges to its original size.
+        """
         ih, iw = self.imgArray.shape
         self.sc_dxc.setRange(0, iw)
         self.sc_dyc.setRange(0, ih)
@@ -670,6 +700,13 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.sl_byw.setRange(0, ih)
 
     def areaIntegrationShow(self, lum_img, droi, proi, broi):
+        """Finds and graphs the xPixel and YPixel graphs from the image.
+        :param lum_img:
+        :param droi:
+        :param proi:
+        :param broi:
+        :return:
+        """
         self.yPixelData = []
         self.xPixelData = []
         self.imageName = self.imgList[self.imgIndx]
@@ -705,6 +742,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.canvas3.draw()
 
     def getRoiValues(self):
+        """Gets the roi values.
+        """
         dxc = self.sc_dxc.value()
         dyc = self.sc_dyc.value()
         dxw = self.sc_dxw.value()
@@ -720,6 +759,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         return (dxc, dyc, dxw, dyw), (pxc, pyc, pxw, pyw), (bxc, byc, bxw, byw)
 
     def OnMouseMove(self, event):
+        """Keeps track of the mouse movement inside the image.
+        """
         if self.imgArray.any():
             if event.inaxes:
                 ix, iy = event.xdata, event.ydata
@@ -737,6 +778,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
                     self.canvas1.draw()
 
     def OnMousePress(self, event):
+        """Keeps track of where the mouse was pressed.
+        """
         if event.button == 1 and event.inaxes:
             self.mouse1_is_pressed = True
             self.mousex0 = event.xdata
@@ -747,6 +790,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
             pass
 
     def OnMouseRelease(self, event):
+        """Activated after the release of the mouse right button.
+        """
         try:
             if event.button == 1 and event.inaxes:
                 self.mouse1_is_pressed = False
@@ -777,6 +822,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
             print "Error"
 
     def PixelDataDialog(self):
+        """Creates a dialog for the user to select what it wants on the report.
+        """
         self.pixelDataDialog = QDialog(self)
         dialogBox = QVBoxLayout()
         buttonLayout = QHBoxLayout()
@@ -812,6 +859,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.pixelDataDialog.exec_()
 
     def CreatePixelReport(self):
+        """Creates the file for the report.
+        """
         if len(self.xPixelData) != 0:
             if self.xPixelReportCb.isChecked() or self.yPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
                 self.reportFile, self.reportFileFilter = QFileDialog.getSaveFileName(self, "Save Report", "",
@@ -823,38 +872,40 @@ class AreaDetectorAnalysisWindow(QMainWindow):
 
 
     def PrintPixelReport(self):
-            if len(self.xPixelData[0]) >= len(self.yPixelData[0]):
-                maxLength = len(self.xPixelData[0])
-            elif len(self.xPixelData[0]) < len(self.yPixelData[0]):
-                maxLength = len(self.yPixelData[0])
+        """Writes the information to the report.
+        """
+        if len(self.xPixelData[0]) >= len(self.yPixelData[0]):
+            maxLength = len(self.xPixelData[0])
+        elif len(self.xPixelData[0]) < len(self.yPixelData[0]):
+            maxLength = len(self.yPixelData[0])
 
-            reportData = []
-            header = "#H "
+        reportData = []
+        header = "#H "
 
-            if self.xPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
-                header += "xPixel xCount "
-                reportData.append(self.xPixelData[0])
-                reportData.append(self.xPixelData[1])
+        if self.xPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
+            header += "xPixel xCount "
+            reportData.append(self.xPixelData[0])
+            reportData.append(self.xPixelData[1])
 
-            if self.yPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
-                header += "yPixel yCount"
-                reportData.append(self.yPixelData[0])
-                reportData.append(self.yPixelData[1])
+        if self.yPixelReportCb.isChecked() or self.allPixelReportCb.isChecked():
+            header += "yPixel yCount"
+            reportData.append(self.yPixelData[0])
+            reportData.append(self.yPixelData[1])
 
-            # Writes to sheet
-            file = open(self.reportFile, "w")
-            file.write("#C " + self.imageName + "\n")
-            file.write(header + "\n")
-            j = 0
-            while j < maxLength:
-                string = ''
-                for s in reportData:
-                    if len(s) > j:
-                        string += "{:5}".format(str(s[j])) + " "
-                j += 1
-                file.write(string + "\n")
+        # Writes to sheet
+        file = open(self.reportFile, "w")
+        file.write("#C " + self.imageName + "\n")
+        file.write(header + "\n")
+        j = 0
+        while j < maxLength:
+            string = ''
+            for s in reportData:
+                if len(s) > j:
+                    string += "{:5}".format(str(s[j])) + " "
+            j += 1
+            file.write(string + "\n")
 
-
+        file.close()
 
 def main():
     """Main method.

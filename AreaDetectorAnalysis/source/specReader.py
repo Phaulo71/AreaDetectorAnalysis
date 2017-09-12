@@ -23,7 +23,7 @@ from spec2nexus.spec import SpecDataFile
 # ---------------------------------------------------------------------------------------------------------------------#
 
 class ReadSpec:
-    """Loads spec file and gets appropriate information from it for a certain image
+    """Loads spec file and gets appropriate information from it for a certain image.
     """
 
     def __init__(self, parent=None):
@@ -31,6 +31,8 @@ class ReadSpec:
         self.mon = []
 
     def loadSpec(self, specFile, directory):
+        """This method loads the spec file and creates the widgets on the control QDockWidget.
+        """
         self.chambers = []
         self.specFile = SpecDataFile(specFile)
         self.scans = self.specFile.scans
@@ -48,37 +50,41 @@ class ReadSpec:
         self.ada.ControlDockWidget()
 
     def MonDialog(self):
-            self.monDialog = QDialog(self.ada)
-            dialogBox = QVBoxLayout()
-            buttonLayout = QHBoxLayout()
-            vBox = QVBoxLayout()
+        """Dialog produce for the user to select the mon value.
+        """
+        self.monDialog = QDialog(self.ada)
+        dialogBox = QVBoxLayout()
+        buttonLayout = QHBoxLayout()
+        vBox = QVBoxLayout()
 
-            groupBox = QGroupBox("Mon")
-            self.buttonGroup = QButtonGroup(groupBox)
+        groupBox = QGroupBox("Mon")
+        self.buttonGroup = QButtonGroup(groupBox)
 
-            for norm in self.chambers:
-                chamberRB = QRadioButton(norm)
-                self.buttonGroup.addButton(chamberRB, int(norm[-1]))
-                vBox.addWidget(chamberRB)
+        for norm in self.chambers:
+            chamberRB = QRadioButton(norm)
+            self.buttonGroup.addButton(chamberRB, int(norm[-1]))
+            vBox.addWidget(chamberRB)
 
-            groupBox.setLayout(vBox)
+        groupBox.setLayout(vBox)
 
-            ok = QPushButton("Ok")
+        ok = QPushButton("Ok")
 
-            ok.clicked.connect(self.SetMon)
+        ok.clicked.connect(self.SetMon)
 
-            buttonLayout.addStretch(1)
-            buttonLayout.addWidget(ok)
+        buttonLayout.addStretch(1)
+        buttonLayout.addWidget(ok)
 
-            dialogBox.addWidget(groupBox)
-            dialogBox.addLayout(buttonLayout)
+        dialogBox.addWidget(groupBox)
+        dialogBox.addLayout(buttonLayout)
 
-            self.monDialog.setWindowTitle("Select chamber")
-            self.monDialog.setLayout(dialogBox)
-            self.monDialog.resize(250, 250)
-            self.monDialog.exec_()
+        self.monDialog.setWindowTitle("Select chamber")
+        self.monDialog.setLayout(dialogBox)
+        self.monDialog.resize(250, 250)
+        self.monDialog.exec_()
 
     def SetMon(self):
+        """Sets the mon.
+        """
         if self.buttonGroup != -1:
             self.monDialog.close()
             for cham in self.chambers:
@@ -86,6 +92,8 @@ class ReadSpec:
                     self.mon = self.scans[str(self.scan)].data[cham]
 
     def DataControlLabels(self):
+        """Gets the appropriate labels for the spec file info display in the control's QDockWidget.
+        """
         controls = []
         for key in self.scans[self.scan].L:
             if key == 'L':
@@ -97,6 +105,8 @@ class ReadSpec:
         return controls
 
     def setSpecData(self):
+        """Sets the spec data into the self.specInfoValue.
+        """
         try:
             self.specInfoValue = []
 
@@ -115,6 +125,8 @@ class ReadSpec:
 
 
     def getSpecData(self, i):
+        """Gets the appropriate spec value for the selected image.
+        """
         try:
             specValue = []
 
@@ -133,6 +145,8 @@ class ReadSpec:
                                            'images folder named properly with the scan number.')
 
     def SpecDataInfo(self):
+        """Creates the labels and text boxes for the spec info display in the Controls QDockWidget.
+        """
         self.specInfo = []
         self.specInfoLabels = []
         self.specInfoBoxes = []
@@ -175,6 +189,8 @@ class ReadSpec:
         return vBoxLayout
 
     def getEnergy(self):
+        """Gets the energy from the spec file.
+        """
         data = self.scans[str(self.scan)].raw
         UE = data.split("#UE")
         ue = UE[1].split(" ")
