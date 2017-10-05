@@ -43,6 +43,15 @@ class ReadSpec:
         for key in self.scans[str(self.scan)].data.keys():
             if key.find("Ion_Ch_") == 0:
                 self.chambers.append(key)
+        # Trying out some code - Start
+        print self.specFile.scans[str(self.scan)].scanCmd.split()[0]
+        print self.specFile.scans[self.scan].G['G4'].split()[3]
+        g3 = self.specFile.scans[self.scan].G["G3"].strip().split()
+        g3 = np.array(map(float, g3))
+        ub = g3.reshape(-1, 3)
+        print ub
+        self.getEtaChiPhiAngles()
+        # -End
 
         self.chambers.sort()
         self.MonDialog()
@@ -196,5 +205,35 @@ class ReadSpec:
         ue = UE[1].split(" ")
         energy = ue[1]
         return energy
+
+    def getUBMatrix(self, scan):
+        """Read UB matrix from the #G3 line from the spec file.
+        :param scan: Scan number
+        :return: 2D array, with 1D arrays size 3
+        """
+        try:
+            g3 = scan.G["G3"].strip().split()
+            g3 = np.array(map(float, g3))
+            ub = g3.reshape(-1, 3)
+            return ub
+
+        except:
+            print ("Unable to read the UB Matrix from G3.")
+
+    def getEtaChiPhiAngles(self):
+        """Gets the eta, chi and phi from the spec file.
+        :return: returns eta, chi and phi
+        """
+        eta = self.specFile.scans[self.scan].data['Eta']
+        chi = self.specFile.scans[self.scan].data['Chi']
+        phi = self.specFile.scans[self.scan].data['Phi']
+        return eta, chi, phi
+
+    def getGeoAnlges(self, scan, angleNames):
+        geoAnles = self
+
+
+
+
 
 

@@ -21,6 +21,7 @@ from matplotlib.patches import Rectangle
 
 from AreaDetectorAnalysis.source.areaData import AreaData
 from AreaDetectorAnalysis.source.specReader import ReadSpec
+from AreaDetectorAnalysis.source.detectorDialog import DetectorDialog
 
 
 # ---------------------------------------------------------------------------------------------------------------------#
@@ -46,6 +47,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.workDirOpen = False
         self.createMenus()
         self.ControlDockWidget()
+        self.detectorDialog = DetectorDialog(self)
+        self.detectorDialog.exec_()
 
         self.fileList = []
         self.yPixelData = []
