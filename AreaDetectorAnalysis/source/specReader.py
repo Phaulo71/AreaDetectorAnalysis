@@ -18,7 +18,8 @@ from PIL import Image
 import numpy as np
 from matplotlib.patches import Rectangle
 
-from spec2nexus.spec import SpecDataFile
+from spec2nexus.spec import SpecDataFile, SpecDataFileHeader
+from AreaDetectorAnalysis.source.detectorDialog import DetectorDialog
 
 # ---------------------------------------------------------------------------------------------------------------------#
 
@@ -28,6 +29,7 @@ class ReadSpec:
 
     def __init__(self, parent=None):
         self.ada = parent
+        self.detectorDialog = DetectorDialog(self)
         self.mon = []
 
     def loadSpec(self, specFile, directory):
@@ -35,6 +37,7 @@ class ReadSpec:
         """
         self.chambers = []
         self.specFile = SpecDataFile(specFile)
+        self.specHeader = SpecDataFileHeader(specFile)
         self.scans = self.specFile.scans
         self.scan = str(int(os.path.basename(directory)))
         self.specFileOpened = True
@@ -43,15 +46,6 @@ class ReadSpec:
         for key in self.scans[str(self.scan)].data.keys():
             if key.find("Ion_Ch_") == 0:
                 self.chambers.append(key)
-        # Trying out some code - Start
-        print self.specFile.scans[str(self.scan)].scanCmd.split()[0]
-        print self.specFile.scans[self.scan].G['G4'].split()[3]
-        g3 = self.specFile.scans[self.scan].G["G3"].strip().split()
-        g3 = np.array(map(float, g3))
-        ub = g3.reshape(-1, 3)
-        print ub
-        self.getEtaChiPhiAngles()
-        # -End
 
         self.chambers.sort()
         self.MonDialog()
@@ -220,17 +214,51 @@ class ReadSpec:
         except:
             print ("Unable to read the UB Matrix from G3.")
 
-    def getEtaChiPhiAngles(self):
+    def getSpecDataForAngles(self):
         """Gets the eta, chi and phi from the spec file.
         :return: returns eta, chi and phi
         """
-        eta = self.specFile.scans[self.scan].data['Eta']
-        chi = self.specFile.scans[self.scan].data['Chi']
-        phi = self.specFile.scans[self.scan].data['Phi']
-        return eta, chi, phi
+        angleSpecInfo = []
+        angles = self.detectorDialog.getAngles()
+        for angle in angles:
+            try:
+                angleSpecInfo.append(self.specFile.scans[self.scan].data[angle])
+            except KeyError:
+                pass
 
-    def getGeoAnlges(self, scan, angleNames):
-        geoAnles = self
+    def getSpecHeaderO(self, specFile):
+        self.motorSpecInfoDic = {}
+        buf = open(specFile, 'r').read()
+        buf.replace('\r\n', '\n').replace('\r', '\n')
+
+        lines = buf.splitlines()
+
+        for line in lines:
+            if line.startswith("#O0"):
+                lineO = line
+                break
+
+        O = lineO.split()
+        O.pop(0)
+        lineP = self.specFile.scans[self.scan].P[0]
+        P = lineP.split()
+
+        if len(O) != len(P):
+            raise Exception ("Please make sure the spec file contains matching information in the header #O0 and under"
+                             " the scan #P0.\n\n" "#O0: " + O + "\n#P0: " + P)
+        else:
+            for i in xrange(len(P)):
+                self.motorSpecInfoDic.update({O[i]: P[i]})
+        print P
+
+
+        print O
+        print self.motorSpecInfoDic
+
+
+
+
+
 
 
 

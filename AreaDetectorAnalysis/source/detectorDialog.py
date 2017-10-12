@@ -20,13 +20,12 @@ from PyQt5.QtGui import *
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.patches import Rectangle
 
-from AreaDetectorAnalysis.source.areaData import AreaData
-from AreaDetectorAnalysis.source.specReader import ReadSpec
-
 class DetectorDialog(QDialog):
     """Main window class"""
     def __init__(self, parent=None):
-        super(DetectorDialog, self).__init__(parent)
+        super(DetectorDialog, self).__init__()
+        self.readSpec = parent
+        self.mainWindow = self.readSpec.ada
         self.setWindowTitle('Detector Dialog')
         self.mainVLayout = QVBoxLayout()
         self.mainHLayout = QHBoxLayout()
@@ -35,19 +34,54 @@ class DetectorDialog(QDialog):
         self.detectorCircleInit()
         self.referenceDirectionsInit()
 
+        buttonHLayout = QHBoxLayout()
+        ok = QPushButton("Okay")
+        ok.clicked.connect(self.okDetectorDialog)
+        cancel = QPushButton('Cancel')
+        cancel.clicked.connect(self.cancelDetectorDialog)
+        buttonHLayout.addWidget(cancel)
+        buttonHLayout.addStretch(1)
+        buttonHLayout.addWidget(ok)
+
+        self.directoryName = QLineEdit()
+        browseWorkDirectory = QPushButton("Browse")
+        browseWorkDirectory.clicked.connect(self.mainWindow.OnOpenWorkDir)
+        self.workDirHLayout = QHBoxLayout()
+        self.workDirHLayout.addWidget(QLabel("Work directory: "))
+        self.workDirHLayout.addWidget(self.directoryName)
+        self.workDirHLayout.addWidget(browseWorkDirectory)
+
+        self.mainVLayout.addLayout(self.workDirHLayout)
+        self.mainVLayout.addSpacing(15)
         self.mainVLayout.addLayout(self.smpCircleVlayout)
-        self.mainVLayout.addSpacing(1)
-        self.mainVLayout.addSpacing(1)
+        self.mainVLayout.addSpacing(5)
         self.mainVLayout.addLayout(self.dtcCircleVlayout)
-        self.mainVLayout.addSpacing(1)
-        self.mainVLayout.addSpacing(1)
+        self.mainVLayout.addSpacing(5)
         self.mainVLayout.addLayout(self.refDirectionsForm)
+        self.mainVLayout.addSpacing(15)
+        self.mainVLayout.addLayout(buttonHLayout)
         self.mainVLayout.addStretch(1)
         self.mainHLayout.addStretch(1)
         self.mainHLayout.addLayout(self.mainVLayout)
         self.mainHLayout.addStretch(1)
         self.setLayout(self.mainHLayout)
 
+
+
+    def cancelDetectorDialog(self):
+        self.close()
+        sys.exit()
+
+    def okDetectorDialog(self):
+        # print(self.readSpec.specFile.scans[self.readSpec.scan].headers)
+        print(self.readSpec.specHeader.comments)
+        print(self.readSpec.specHeader.date)
+        print(self.readSpec.specHeader.H)
+        print(self.readSpec.specHeader.h5writers)
+
+
+        self.getAngles()
+        # self.close()
 
     def sampleCircleInit(self):
 
@@ -252,6 +286,30 @@ class DetectorDialog(QDialog):
         self.refDirectionsForm.addRow("Inplane Reference Direction:", self.inplaneRefDirBox)
         self.refDirectionsForm.addRow("Sample Surface Normal Direction:", self.sampleSurfaceNormalDirBox)
         self.refDirectionsForm.addRow("Projection Direction:", self.projectionDirBox)
+
+    def getSampleMotorNames(self):
+        names = []
+        for s in self.sampleCircleMotorList:
+            names.append(s.itemText(s.currentIndex()))
+        return names
+
+    def getDetectorMotorNames(self):
+        names = []
+        for d in self.detectorCircleMotorList:
+            names.append(d.itemText(d.currentIndex()))
+        return names
+
+    def getAngles(self):
+        angles = []
+        smpAngles = self.getSampleMotorNames()
+        for s in smpAngles:
+            angles.append(s)
+
+        dtcAngles = self.getDetectorMotorNames()
+        for d in dtcAngles:
+            angles.append(d)
+
+        return angles
 
 
 

@@ -47,8 +47,6 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.workDirOpen = False
         self.createMenus()
         self.ControlDockWidget()
-        self.detectorDialog = DetectorDialog(self)
-        self.detectorDialog.exec_()
 
         self.fileList = []
         self.yPixelData = []
@@ -90,6 +88,8 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         self.canvas2.setParent(self.centralWidget)
         self.canvas3 = FigureCanvas(self.figure3)
         self.canvas3.setParent(self.centralWidget)
+
+        self.readSpec.detectorDialog.exec_()
 
         self.log = QTextEdit()
         self.log.setReadOnly(True)
@@ -400,7 +400,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
         """
         self.openWorkDirAction = QAction('Open Work Directory', self)
         self.openWorkDirAction.setStatusTip('Open the directory with the images and spec file.')
-        self.openWorkDirAction.triggered.connect(self.OnOpenWorkDir)
+        # self.openWorkDirAction.triggered.connect(self.OnOpenWorkDir)
 
 
         self.saveAsAction = QAction("Save As", self)
@@ -446,44 +446,48 @@ class AreaDetectorAnalysisWindow(QMainWindow):
     def OnOpenWorkDir(self):
         """This method opens the the spec file and the folder with the images.
         """
-        try:
-            self.fileList = []
-            self.imgList = []
-
-            self.dir = QFileDialog.getExistingDirectory(caption="Choose work directory")
-
-            if os.path.isdir(self.dir):
-                items = os.listdir(self.dir)
-
-                for item in items:
-                    if self.dir.find("/") == 0:
-                        path = self.dir + '/' + item
-                    elif self.dir.find("\\") == 0:
-                        path = self.dir + '\\' + item
-                    if os.path.isdir(path):
-                        imgDir = path
-                    elif os.path.isfile(path):
-                        specFile = path
+       # try:
+        self.fileList = []
+        self.imgList = []
 
 
-                images = os.listdir(imgDir)
-                for img in images:
-                    self.fileListBox.addItem(img)
-                    self.imgList.append(img)
-                    if self.dir.find("/") == 0:
-                        self.fileList.append(imgDir + '/' + img)
-                    elif self.dir.find("\\") == 0:
-                        self.fileList.append(imgDir + '\\' + img)
+        self.dir = QFileDialog.getExistingDirectory(caption="Choose work directory")
 
-                self.workDirOpen = True
-                self.readSpec.loadSpec(specFile, imgDir)
-        except:
-            QMessageBox.warning(self, "Error", "Please make sure the work directory follows the correct format.\n\n"
-                                "Directory should contain:\n\n" "1. Folder with images\n2. Spec file"
-                                "\n\nNote: The images folder should be named the number of the scan. For example 64.")
-            self.fileListBox.clear()
-            self.fileList = []
-            self.imgList = []
+        if os.path.isdir(self.dir):
+            items = os.listdir(self.dir)
+
+            for item in items:
+                if self.dir.find("/") == 0:
+                    path = self.dir + '/' + item
+                elif self.dir.find("\\") == 0:
+                    path = self.dir + '\\' + item
+                if os.path.isdir(path):
+                    imgDir = path
+                elif os.path.isfile(path):
+                    specFile = path
+
+
+            images = os.listdir(imgDir)
+            for img in images:
+                self.fileListBox.addItem(img)
+                self.imgList.append(img)
+                if self.dir.find("/") == 0:
+                    self.fileList.append(imgDir + '/' + img)
+                elif self.dir.find("\\") == 0:
+                    self.fileList.append(imgDir + '\\' + img)
+
+            self.workDirOpen = True
+            self.readSpec.detectorDialog.directoryName.setText(self.dir)
+            self.readSpec.loadSpec(specFile, imgDir)
+            self.readSpec.getSpecHeaderO(specFile)
+        #except:
+         #   QMessageBox.warning(self, "Error", "Please make sure the work directory follows the correct format.\n\n"
+         #                       "Directory should contain:\n\n" "1. Folder with images\n2. Spec file"
+         #                       "\n\nNote: The images folder should be named the number of the scan. For example 64.")
+         #   self.fileListBox.clear()
+          #  self.fileList = []
+          #  self.imgList = []
+
 
 
     def OnSaveAs(self):
