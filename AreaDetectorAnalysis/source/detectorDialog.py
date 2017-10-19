@@ -27,12 +27,16 @@ class DetectorDialog(QDialog):
         self.readSpec = parent
         self.mainWindow = self.readSpec.ada
         self.setWindowTitle('Detector Dialog')
-        self.mainVLayout = QVBoxLayout()
+        self.mainVLayout1 = QVBoxLayout()
+        self.mainVLayout2 = QVBoxLayout()
         self.mainHLayout = QHBoxLayout()
+        self.finalMainVLayout = QVBoxLayout()
+        self.finalMainHLayout = QHBoxLayout()
 
         self.sampleCircleInit()
         self.detectorCircleInit()
         self.referenceDirectionsInit()
+        self.detectorInfoInit()
 
         buttonHLayout = QHBoxLayout()
         ok = QPushButton("Okay")
@@ -51,20 +55,29 @@ class DetectorDialog(QDialog):
         self.workDirHLayout.addWidget(self.directoryName)
         self.workDirHLayout.addWidget(browseWorkDirectory)
 
-        self.mainVLayout.addLayout(self.workDirHLayout)
-        self.mainVLayout.addSpacing(15)
-        self.mainVLayout.addLayout(self.smpCircleVlayout)
-        self.mainVLayout.addSpacing(5)
-        self.mainVLayout.addLayout(self.dtcCircleVlayout)
-        self.mainVLayout.addSpacing(5)
-        self.mainVLayout.addLayout(self.refDirectionsForm)
-        self.mainVLayout.addSpacing(15)
-        self.mainVLayout.addLayout(buttonHLayout)
-        self.mainVLayout.addStretch(1)
-        self.mainHLayout.addStretch(1)
-        self.mainHLayout.addLayout(self.mainVLayout)
-        self.mainHLayout.addStretch(1)
-        self.setLayout(self.mainHLayout)
+        self.mainVLayout1.addLayout(self.smpCircleVlayout)
+        self.mainVLayout1.addSpacing(5)
+        self.mainVLayout1.addLayout(self.dtcCircleVlayout)
+
+        self.mainVLayout2.addLayout(self.refDirectionsForm)
+        self.mainVLayout2.addSpacing(5)
+        self.mainVLayout2.addLayout(self.detectorInfoGLayout)
+        self.mainVLayout2.addStretch(1)
+
+        self.mainHLayout.addLayout(self.mainVLayout1)
+        self.mainHLayout.addSpacing(25)
+        self.mainHLayout.addLayout(self.mainVLayout2)
+
+        self.finalMainVLayout.addLayout(self.workDirHLayout)
+        self.finalMainVLayout.addSpacing(15)
+        self.finalMainVLayout.addLayout(self.mainHLayout)
+        self.finalMainVLayout.addSpacing(15)
+        self.finalMainVLayout.addLayout(buttonHLayout)
+
+        self.finalMainHLayout.addStretch(1)
+        self.finalMainHLayout.addLayout(self.finalMainVLayout)
+        self.finalMainHLayout.addStretch(1)
+        self.setLayout(self.finalMainHLayout)
 
 
 
@@ -73,14 +86,7 @@ class DetectorDialog(QDialog):
         sys.exit()
 
     def okDetectorDialog(self):
-        # print(self.readSpec.specFile.scans[self.readSpec.scan].headers)
-        print(self.readSpec.specHeader.comments)
-        print(self.readSpec.specHeader.date)
-        print(self.readSpec.specHeader.H)
-        print(self.readSpec.specHeader.h5writers)
-
-
-        self.getAngles()
+        self.readSpec.getHKL()
         # self.close()
 
     def sampleCircleInit(self):
@@ -259,33 +265,52 @@ class DetectorDialog(QDialog):
         self.refDirectionsForm = QFormLayout()
         self.refDirectionsForm.setAlignment(Qt.AlignHCenter)
         self.primaryBeamDirBox = QComboBox()
-        self.primaryBeamDirBox.setFixedWidth(40)
+        self.primaryBeamDirBox.setFixedWidth(45)
         self.primaryBeamDirBox.addItem("x")
         self.primaryBeamDirBox.addItem("y")
         self.primaryBeamDirBox.addItem("z")
 
         self.inplaneRefDirBox = QComboBox()
-        self.inplaneRefDirBox.setFixedWidth(40)
+        self.inplaneRefDirBox.setFixedWidth(45)
         self.inplaneRefDirBox.addItem("x")
         self.inplaneRefDirBox.addItem("y")
         self.inplaneRefDirBox.addItem("z")
 
         self.sampleSurfaceNormalDirBox = QComboBox()
-        self.sampleSurfaceNormalDirBox.setFixedWidth(40)
+        self.sampleSurfaceNormalDirBox.setFixedWidth(45)
         self.sampleSurfaceNormalDirBox.addItem("x")
         self.sampleSurfaceNormalDirBox.addItem("y")
         self.sampleSurfaceNormalDirBox.addItem("z")
 
         self.projectionDirBox = QComboBox()
-        self.projectionDirBox.setFixedWidth(40)
+        self.projectionDirBox.setFixedWidth(45)
         self.projectionDirBox.addItem("x")
         self.projectionDirBox.addItem("y")
         self.projectionDirBox.addItem("z")
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
 
+        self.refDirectionsForm.addRow(QLabel("Reference Directions:"))
+        self.refDirectionsForm.addRow(line)
         self.refDirectionsForm.addRow("Primary Beam Direction:", self.primaryBeamDirBox)
         self.refDirectionsForm.addRow("Inplane Reference Direction:", self.inplaneRefDirBox)
         self.refDirectionsForm.addRow("Sample Surface Normal Direction:", self.sampleSurfaceNormalDirBox)
         self.refDirectionsForm.addRow("Projection Direction:", self.projectionDirBox)
+
+    def detectorInfoInit(self):
+        self.detectorInfoGLayout = QGridLayout()
+
+        self.pixelDirectionBox = QComboBox()
+        self.pixelDirectionBox.setFixedWidth(45)
+        self.pixelDirectionBox.addItem('x+')
+        self.pixelDirectionBox.addItem('x-')
+        self.pixelDirectionBox.addItem('y+')
+        self.pixelDirectionBox.addItem('y-')
+        self.pixelDirectionBox.addItem('z+')
+        self.pixelDirectionBox.addItem('z-')
+
+        self.detectorInfoGLayout.addWidget(QLabel("Pixel Direction 1:"), 0, 0)
+        self.detectorInfoGLayout.addWidget(self.pixelDirectionBox,0,2)
 
     def getSampleMotorNames(self):
         names = []
@@ -310,6 +335,45 @@ class DetectorDialog(QDialog):
             angles.append(d)
 
         return angles
+
+    def getSampleCircleDirections(self):
+        directions = []
+        for d in self.sampleCircleDirectionList:
+            directions.append(d.itemText(d.currentIndex()))
+
+        return directions
+
+    def getDetectorCircleDirections(self):
+        directions = []
+        for d in self.detectorCircleDirectionList:
+            directions.append(d.itemText(d.currentIndex()))
+
+        return directions
+
+    def getPrimaryBeamDirection(self):
+        direction = self.primaryBeamDirBox.itemText(self.primaryBeamDirBox.currentIndex())
+        return self.getDirectionCoordinates(direction)
+
+    def getInplaneReferenceDirection(self):
+        direction = self.inplaneRefDirBox.itemText(self.inplaneRefDirBox.currentIndex())
+        return self.getDirectionCoordinates(direction)
+
+    def getSampleSurfaceNormalDirection(self):
+        direction = self.sampleSurfaceNormalDirBox.itemText(self.sampleSurfaceNormalDirBox.currentIndex())
+        return self.getDirectionCoordinates(direction)
+
+    def getDirectionCoordinates(self, direction):
+        if direction == 'y':
+            return [0, 1, 0]
+        elif direction == 'x':
+            return [1, 0, 0]
+        else:
+            return [0, 0, 1]
+
+
+
+
+
 
 
 

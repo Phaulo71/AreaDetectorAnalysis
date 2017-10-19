@@ -17,6 +17,7 @@ import matplotlib.pylab as plt
 from PIL import Image
 import numpy as np
 from matplotlib.patches import Rectangle
+import xrayutilities as xu
 
 from spec2nexus.spec import SpecDataFile, SpecDataFileHeader
 from AreaDetectorAnalysis.source.detectorDialog import DetectorDialog
@@ -43,7 +44,7 @@ class ReadSpec:
         self.specFileOpened = True
 
         # Gets possible normalizer values
-        for key in self.scans[str(self.scan)].data.keys():
+        for key in self.scans[self.scan].data.keys():
             if key.find("Ion_Ch_") == 0:
                 self.chambers.append(key)
 
@@ -198,15 +199,14 @@ class ReadSpec:
         UE = data.split("#UE")
         ue = UE[1].split(" ")
         energy = ue[1]
-        return energy
+        return float(energy)
 
-    def getUBMatrix(self, scan):
+    def getUBMatrix(self):
         """Read UB matrix from the #G3 line from the spec file.
-        :param scan: Scan number
         :return: 2D array, with 1D arrays size 3
         """
         try:
-            g3 = scan.G["G3"].strip().split()
+            g3 = self.scans[self.scan].G["G3"].strip().split()
             g3 = np.array(map(float, g3))
             ub = g3.reshape(-1, 3)
             return ub
@@ -214,19 +214,31 @@ class ReadSpec:
         except:
             print ("Unable to read the UB Matrix from G3.")
 
-    def getSpecDataForAngles(self):
+    def getListSpecDataForAngles(self):
         """Gets the eta, chi and phi from the spec file.
         :return: returns eta, chi and phi
         """
-        angleSpecInfo = []
+        angleListInfo = []
         angles = self.detectorDialog.getAngles()
         for angle in angles:
             try:
-                angleSpecInfo.append(self.specFile.scans[self.scan].data[angle])
+                angleListInfo.append(self.specFile.scans[self.scan].data[angle])
             except KeyError:
-                pass
+                #try:
+                #  angList = np.zeros((0, self.totalScans))
+                motorValue = self.motorSpecInfoDic[angle]
+                angList = np.full((self.totalScans, 1), float(motorValue), dtype=float)
+                angleListInfo.append(angList)
+                #except:
+                    #print "Something went wrong."
+        return angleListInfo
 
     def getSpecHeaderO(self, specFile):
+        """Gets the values for the spec motors/angles input by the user.
+        :param specFile:
+        :return: Dictionary with spec anlge and value
+        """
+        self.totalScans = 0
         self.motorSpecInfoDic = {}
         buf = open(specFile, 'r').read()
         buf.replace('\r\n', '\n').replace('\r', '\n')
@@ -249,12 +261,107 @@ class ReadSpec:
         else:
             for i in xrange(len(P)):
                 self.motorSpecInfoDic.update({O[i]: P[i]})
-        print P
 
+        try:
+            s = self.scans[self.scan].S.split()
+            self.totalScans = int(s[len(s)-2])
+        except:
+            pass
+            # Make the user input the total scans.
 
-        print O
-        print self.motorSpecInfoDic
+    def getDetectorROI(self):
+        """Gets the detector ROI (Npixels)
+        :return:
+        """
+        return [0, 487, 0, 195]
 
+    def getNumPixelsToAverage(self):
+        return [1, 1]
+
+    def getDetectorPixelDirection1(self):
+        """Gets the detector pixel direction from the detector dialog input.
+        :return: pixel direction
+        """
+        # I need to get this from the dialog
+        return 'z-'
+
+    def getDetectorPixelDirection2(self):
+        """Gets the detector pixel direction from the detector dialog input.
+        :return: pixel direction
+        """
+        # I need to get this from the dialog
+        return 'x-'
+
+    def getDetectorCenterChannel(self):
+        """Gets the detector center channel from the detector dialog input
+        :return: list w/ detector center channels
+        """
+        return [173, 101]
+
+    def getDetectorDimensions(self):
+        """Returns the Npixels from the detector dialog
+        :return: list of pixels
+        """
+        return [487, 195]
+
+    def getDetectorPixelWidth(self):
+        """Returns the width of the detector by dividing the size with the pixels
+        :return:
+        """
+        s = 83.764/487  #  size/Npixels
+        f = 33.54/195  #  size/Npixels
+        return [s, f]
+
+    def getDistanceToDetector(self):
+        return 1193.8
+
+    def getHKL(self):
+        angleList = self.getListSpecDataForAngles()
+        qconv = xu.experiment.QConversion(self.detectorDialog.getSampleCircleDirections(),
+                                          self.detectorDialog.getDetectorCircleDirections(),
+                                          self.detectorDialog.getPrimaryBeamDirection())
+
+        en = self.getEnergy()
+        hxrd = xu.HXRD(self.detectorDialog.getInplaneReferenceDirection(),
+                       self.detectorDialog.getSampleSurfaceNormalDirection(),
+                       en=en,
+                       qconv=qconv)
+        if (self.getDetectorPixelWidth() != None) and \
+                (self.getDistanceToDetector() != None):
+            hxrd.Ang2Q.init_area(self.getDetectorPixelDirection1(),
+                                 self.getDetectorPixelDirection2(),
+                                 cch1=self.getDetectorCenterChannel()[0],
+                                 cch2=self.getDetectorCenterChannel()[1],
+                                 Nch1=self.getDetectorDimensions()[0],
+                                 Nch2=self.getDetectorDimensions()[1],
+                                 pwidth1=self.getDetectorPixelWidth()[0],
+                                 pwidth2=self.getDetectorPixelWidth()[1],
+                                 distance=self.getDistanceToDetector(),
+                                 Nav=self.getNumPixelsToAverage(),
+                                 roi=self.getDetectorROI())
+        else:
+            hxrd.Ang2Q.init_area(self.getDetectorPixelDirection1(),
+                                 self.getDetectorPixelDirection2(),
+                                 cch1=self.getDetectorCenterChannel()[0],
+                                 cch2=self.getDetectorCenterChannel()[1],
+                                 Nch1=self.getDetectorDimensions()[0], \
+                                 Nch2=self.getDetectorDimensions()[1], \
+                                 chpdeg1=self.getDetectorChannelsPerDegree()[0],  # Can't find where you give this value
+                                 chpdeg2=self.getDetectorChannelsPerDegree()[1],  # Can't find where you give this value
+                                 Nav=self.getNumPixelsToAverage(),
+                                 roi=self.getDetectorROI())
+
+        h, k, l = hxrd.Ang2Q.area(*angleList,
+                            roi=self.getDetectorROI(),
+                            Nav=self.getNumPixelsToAverage(),
+                            UB = self.getUBMatrix())
+
+        print 'H'
+        print h
+        print 'k'
+        print k
+        print 'L'
+        print l
 
 
 
