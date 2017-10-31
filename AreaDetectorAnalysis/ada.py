@@ -477,6 +477,7 @@ class AreaDetectorAnalysisWindow(QMainWindow):
                         self.fileList.append(imgDir + '\\' + img)
 
                 self.workDirOpen = True
+                print (len(self.imgList))
                 self.readSpec.detectorDialog.directoryName.setText(self.dir)
                 self.readSpec.loadSpec(specFile, imgDir)
                 self.readSpec.getSpecHeaderO(specFile)

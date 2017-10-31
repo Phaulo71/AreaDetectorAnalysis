@@ -60,7 +60,7 @@ class DetectorDialog(QDialog):
         self.mainVLayout1.addLayout(self.dtcCircleVlayout)
 
         self.mainVLayout2.addLayout(self.refDirectionsForm)
-        self.mainVLayout2.addSpacing(5)
+        self.mainVLayout2.addSpacing(25)
         self.mainVLayout2.addLayout(self.detectorInfoGLayout)
         self.mainVLayout2.addStretch(1)
 
@@ -86,8 +86,8 @@ class DetectorDialog(QDialog):
         sys.exit()
 
     def okDetectorDialog(self):
-        self.readSpec.getHKL()
-        # self.close()
+        self.readSpec.rawMap()
+        self.close()
 
     def sampleCircleInit(self):
 
@@ -300,17 +300,73 @@ class DetectorDialog(QDialog):
     def detectorInfoInit(self):
         self.detectorInfoGLayout = QGridLayout()
 
-        self.pixelDirectionBox = QComboBox()
-        self.pixelDirectionBox.setFixedWidth(45)
-        self.pixelDirectionBox.addItem('x+')
-        self.pixelDirectionBox.addItem('x-')
-        self.pixelDirectionBox.addItem('y+')
-        self.pixelDirectionBox.addItem('y-')
-        self.pixelDirectionBox.addItem('z+')
-        self.pixelDirectionBox.addItem('z-')
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
 
-        self.detectorInfoGLayout.addWidget(QLabel("Pixel Direction 1:"), 0, 0)
-        self.detectorInfoGLayout.addWidget(self.pixelDirectionBox,0,2)
+        self.pixelDirectionBox1 = QComboBox()
+        self.pixelDirectionBox1.setFixedWidth(45)
+        self.pixelDirectionBox1.addItem('x+')
+        self.pixelDirectionBox1.addItem('x-')
+        self.pixelDirectionBox1.addItem('y+')
+        self.pixelDirectionBox1.addItem('y-')
+        self.pixelDirectionBox1.addItem('z+')
+        self.pixelDirectionBox1.addItem('z-')
+
+        self.pixelDirectionBox2 = QComboBox()
+        self.pixelDirectionBox2.setFixedWidth(45)
+        self.pixelDirectionBox2.addItem('x+')
+        self.pixelDirectionBox2.addItem('x-')
+        self.pixelDirectionBox2.addItem('y+')
+        self.pixelDirectionBox2.addItem('y-')
+        self.pixelDirectionBox2.addItem('z+')
+        self.pixelDirectionBox2.addItem('z-')
+
+        self.centerChannelLnEdit1 = QLineEdit()
+        self.centerChannelLnEdit1.setFixedWidth(55)
+        self.centerChannelLnEdit1.setValidator(QDoubleValidator())
+        self.centerChannelLnEdit2 = QLineEdit()
+        self.centerChannelLnEdit2.setFixedWidth(55)
+        self.centerChannelLnEdit2.setValidator(QDoubleValidator())
+
+        self.nPixelsLnEdit1 = QLineEdit()
+        self.nPixelsLnEdit1.setFixedWidth(55)
+        self.nPixelsLnEdit1.setValidator(QDoubleValidator())
+        self.nPixelsLnEdit2 = QLineEdit()
+        self.nPixelsLnEdit2.setFixedWidth(55)
+        self.nPixelsLnEdit2.setValidator(QDoubleValidator())
+
+        self.detectorSizeLnEdit1 = QLineEdit()
+        self.detectorSizeLnEdit1.setFixedWidth(55)
+        self.detectorSizeLnEdit1.setValidator(QDoubleValidator())
+        self.detectorSizeLnEdit2 = QLineEdit()
+        self.detectorSizeLnEdit2.setFixedWidth(55)
+        self.detectorSizeLnEdit2.setValidator(QDoubleValidator())
+
+        self.distanceLnEdit = QLineEdit()
+        self.distanceLnEdit.setFixedWidth(55)
+        self.distanceLnEdit.setValidator(QDoubleValidator())
+        self.detectorIDBox = QComboBox()
+        self.detectorIDBox.addItem('Pilatus')
+
+        self.detectorInfoGLayout.addWidget(QLabel("Detector Geometry:"), 0, 0)
+        self.detectorInfoGLayout.addWidget(line, 1, 0, 1, 3)
+        self.detectorInfoGLayout.addWidget(QLabel("Pixels:"), 2, 0)
+        self.detectorInfoGLayout.addWidget(self.nPixelsLnEdit1, 2, 1)
+        self.detectorInfoGLayout.addWidget(self.nPixelsLnEdit2, 2, 2)
+        self.detectorInfoGLayout.addWidget(QLabel("Center Channel Pixel:"), 3, 0)
+        self.detectorInfoGLayout.addWidget(self.centerChannelLnEdit1, 3, 1)
+        self.detectorInfoGLayout.addWidget(self.centerChannelLnEdit2, 3, 2)
+        self.detectorInfoGLayout.addWidget(QLabel("Distance (mm):"), 4, 0)
+        self.detectorInfoGLayout.addWidget(self.distanceLnEdit, 4, 2)
+        self.detectorInfoGLayout.addWidget(QLabel("Size (mm):"), 5, 0)
+        self.detectorInfoGLayout.addWidget(self.detectorSizeLnEdit1, 5, 1)
+        self.detectorInfoGLayout.addWidget(self.detectorSizeLnEdit2, 5, 2)
+        self.detectorInfoGLayout.addWidget(QLabel("Pixel Direction 1:"), 6, 0)
+        self.detectorInfoGLayout.addWidget(self.pixelDirectionBox1, 6, 2, alignment=Qt.AlignRight)
+        self.detectorInfoGLayout.addWidget(QLabel("Pixel Direction 2:"), 7, 0)
+        self.detectorInfoGLayout.addWidget(self.pixelDirectionBox2, 7, 2, alignment=Qt.AlignRight)
+        self.detectorInfoGLayout.addWidget(QLabel("Detector ID:"), 8, 0)
+        self.detectorInfoGLayout.addWidget(self.detectorIDBox, 8, 2, alignment=Qt.AlignRight)
 
     def getSampleMotorNames(self):
         names = []
@@ -370,6 +426,62 @@ class DetectorDialog(QDialog):
         else:
             return [0, 0, 1]
 
+
+    def getDetectorROI(self):
+        """Gets the detector ROI (Npixels)
+        :return:
+        """
+        n1 = float(self.nPixelsLnEdit1.text())
+        n2 = float(self.nPixelsLnEdit2.text())
+        return [0, n1, 0, n2]
+
+    def getNumPixelsToAverage(self):
+        return [1, 1]
+
+    def getDetectorPixelDirection1(self):
+        """Gets the detector pixel direction from the detector dialog input.
+        :return: pixel direction 1
+        """
+        return self.pixelDirectionBox1.itemText(self.pixelDirectionBox1.currentIndex())
+
+    def getDetectorPixelDirection2(self):
+        """Gets the detector pixel direction from the detector dialog input.
+        :return: pixel direction 2
+        """
+        return self.pixelDirectionBox2.itemText(self.pixelDirectionBox2.currentIndex())
+
+    def getDetectorCenterChannel(self):
+        """Gets the detector center channel from the detector dialog input
+        :return: list w/ detector center channels
+        """
+        n1 = float(self.centerChannelLnEdit1.text())
+        n2 = float(self.centerChannelLnEdit2.text())
+        return [n1, n2]
+
+    def getDetectorDimensions(self):
+        """Returns the Npixels from the detector dialog
+        :return: list of pixels
+        """
+        n1 = float(self.nPixelsLnEdit1.text())
+        n2 = float(self.nPixelsLnEdit2.text())
+        return [n1, n2]
+
+    def getDetectorPixelWidth(self):
+        """Returns the width of the detector by dividing the size with the pixels
+        :return:
+        """
+        p1 = float(self.nPixelsLnEdit1.text())
+        p2 = float(self.nPixelsLnEdit2.text())
+
+        s1 = float(self.detectorSizeLnEdit1.text())
+        s2 = float(self.detectorSizeLnEdit2.text())
+
+        s = s1 / p1
+        f = s2 / p2
+        return [s, f]
+
+    def getDistanceToDetector(self):
+        return float(self.distanceLnEdit.text())
 
 
 
