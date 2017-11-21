@@ -19,19 +19,20 @@ from matplotlib.patches import Rectangle
 import xrayutilities as xu
 import matplotlib.pyplot as plt
 from spec2nexus.spec import SpecDataFile, SpecDataFileHeader
-from AreaDetectorAnalysis.source.detectorDialog import DetectorDialog
-from AreaDetectorAnalysis.source.xmlConverter import ConvertToXML
+from detectorDialog import DetectorDialog
 
 # ---------------------------------------------------------------------------------------------------------------------#
 
-class ReadSpec:
+class ReadSpec():
     """Loads spec file and gets appropriate information from it for a certain image.
     """
 
     def __init__(self, parent=None):
-        self.ada = parent
-        self.detectorDialog = DetectorDialog(self)
         self.mon = []
+        self.mainWindow = parent
+        self.detectorDialog = DetectorDialog(self)
+        print 'Hi'
+        # self.xmlConvert = ConvertToXML(self)
 
     def loadSpec(self, specFile, directory):
         """This method loads the spec file and creates the widgets on the control QDockWidget.
@@ -52,13 +53,13 @@ class ReadSpec:
 
         self.chambers.sort()
         self.MonDialog()
-        self.ada.controlDockWidget.close()
-        self.ada.ControlDockWidget()
+        self.mainWindow.controlDockWidget.close()
+        self.mainWindow.ControlDockWidget()
 
     def MonDialog(self):
         """Dialog produce for the user to select the mon value.
         """
-        self.monDialog = QDialog(self.ada)
+        self.monDialog = QDialog(self.mainWindow)
         dialogBox = QVBoxLayout()
         buttonLayout = QHBoxLayout()
         vBox = QVBoxLayout()
@@ -126,7 +127,7 @@ class ReadSpec:
                 else:
                     self.specInfoValue.append(self.scans[self.scan].data[str(n)])
         except:
-            QMessageBox.warning(self.ada, "Warning", "Error loading the values from the spec. Please make sure "
+            QMessageBox.warning(self.mainWindow, "Warning", "Error loading the values from the spec. Please make sure "
                                                      "they follow the appropriate format.")
 
 
@@ -147,7 +148,7 @@ class ReadSpec:
                 self.specInfoBoxes[j].setText(str(n))
                 j += 1
         except IndexError:
-            QMessageBox.warning(self.ada, "Error", 'Please make sure you have the correct spec file, and/or have have the '
+            QMessageBox.warning(self.mainWindow, "Error", 'Please make sure you have the correct spec file, and/or have have the '
                                            'images folder named properly with the scan number.')
 
     def SpecDataInfo(self):
@@ -307,7 +308,7 @@ class ReadSpec:
             """
             foundIndex = 0
             for ind in xrange(len(scan.data[scan.data.keys()[0]])):
-                im = Image.open(self.ada.fileList[ind])
+                im = Image.open(self.mainWindow.fileList[ind])
                 img = np.array(im.getdata()).reshape(im.size[1], im.size[0]).T
 
                 img2 = xu.blockAverage2D(img,
@@ -319,7 +320,6 @@ class ReadSpec:
                                 roi=self.detectorDialog.getDetectorROI(),
                                 Nav=self.detectorDialog.getNumPixelsToAverage(),
                                 UB = self.getUBMatrix())
-
             print 'H'
             print h
             print 'k'
@@ -333,9 +333,6 @@ class ReadSpec:
             print l.shape
         except Exception as ex:
             print ("Something went wrong. \n" + str(ex))  # I need to make this more specific.
-
-
-
 
 
 
