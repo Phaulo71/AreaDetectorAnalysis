@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<dataForXrayutils xmlns="https://subversion.xray.aps.anl.gov/RSM/dataForXrayutils">
+    <instForXrayutils>
+        <sampleCircles numCircles="4">
+            <circleAxis directionAxis="y+" number="1" specMotorName="Mu" />
+            <circleAxis directionAxis="x+" number="2" specMotorName="Eta" />
+            <circleAxis directionAxis="z-" number="3" specMotorName="Chi" />
+            <circleAxis directionAxis="y-" number="4" specMotorName="Phi" />
+        </sampleCircles>
+        <detectorCircles numCircles="2">
+            <circleAxis directionAxis="y+" number="1" specMotorName="Nu" />
+            <circleAxis directionAxis="x+" number="2" specMotorName="Delta" />
+        </detectorCircles>
+        <primaryBeamDirection>
+            <axis number="1">0</axis>
+            <axis number="2">1</axis>
+            <axis number="3">0</axis>
+        </primaryBeamDirection>
+        <inplaneReferenceDirection>
+            <axis number="1">0</axis>
+            <axis number="2">1</axis>
+            <axis number="3">0</axis>
+        </inplaneReferenceDirection>
+        <sampleSurfaceNormalDirection>
+            <axis number="1">0</axis>
+            <axis number="2">0</axis>
+            <axis number="3">1</axis>
+        </sampleSurfaceNormalDirection>
+        <projectionDirection>
+            <axis number="1">0</axis>
+            <axis number="2">0</axis>
+            <axis number="3">1</axis>
+        </projectionDirection>
+    </instForXrayutils>
+    <detectorGeometryForXrayutils>
+        <Detector>
+            <pixelDirection1>z-</pixelDirection1>
+            <pixelDirection2>x-</pixelDirection2>
+            <centerChannelPixel>273 101</centerChannelPixel>
+            <Npixels>487 195</Npixels>
+            <size unit="mm">83.764 33.54</size>
+            <distance unit="mm">1193.8</distance>
+            <ID>Pilatus</ID>
+            <notes> </notes>
+        </Detector>
+    </detectorGeometryForXrayutils>
+</dataForXrayutils>

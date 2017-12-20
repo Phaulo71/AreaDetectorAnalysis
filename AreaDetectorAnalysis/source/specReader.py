@@ -31,8 +31,6 @@ class ReadSpec():
         self.mon = []
         self.mainWindow = parent
         self.detectorDialog = DetectorDialog(self)
-        print 'Hi'
-        # self.xmlConvert = ConvertToXML(self)
 
     def loadSpec(self, specFile, directory):
         """This method loads the spec file and creates the widgets on the control QDockWidget.
@@ -276,6 +274,8 @@ class ReadSpec():
         """Gets the hkl for each image in the scan
         :return:
         """
+        #  Some stuff to add for the future:
+        #       - Doing the data in chunks if the data is too big
         try:
             intensity = np.array([])
             angleList = self.getListSpecDataForAngles()
@@ -326,13 +326,14 @@ class ReadSpec():
             print k
             print 'L'
             print l
-            print "L[0]"
+            print l[:, 0]
             plt.imshow(l[120])
             plt.colorbar()
             plt.show()
             print l.shape
         except Exception as ex:
-            print ("Something went wrong. \n" + str(ex))  # I need to make this more specific.
+            QMessageBox.warning(self.mainWindow, "Error",
+                                "Something went wrong while getting the rawmap. \n\n Exception: " + str(ex))
 
 
 

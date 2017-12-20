@@ -9,14 +9,11 @@ from __future__ import unicode_literals
 
 import os
 import sys
-import time
+import xml.etree.ElementTree as ET
 
-import matplotlib.pylab as plt
-import numpy as np
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-import xml.etree.ElementTree as ET
 from InstForXrayutilsReader import InstForXrayutilsReader
 
 
@@ -26,6 +23,7 @@ class DetectorDialog(QDialog):
         super(DetectorDialog, self).__init__()
         self.readSpec = parent
         self.mainWindow = self.readSpec.mainWindow
+        self.rejected.connect(self.cancelDetectorDialog)
         self.setWindowTitle('Detector Dialog')
         self.mainVLayout1 = QVBoxLayout()
         self.mainVLayout2 = QVBoxLayout()
@@ -42,11 +40,15 @@ class DetectorDialog(QDialog):
         ok.clicked.connect(self.okDetectorDialog)
         cancel = QPushButton('Cancel')
         cancel.clicked.connect(self.cancelDetectorDialog)
+        export = QPushButton("Export")
+        export.clicked.connect(self.createXMLFile)
         buttonHLayout.addWidget(cancel)
+        buttonHLayout.addWidget(export)
         buttonHLayout.addStretch(1)
         buttonHLayout.addWidget(ok)
 
         self.directoryName = QLineEdit()
+        self.directoryName.setReadOnly(True)
         browseWorkDirectory = QPushButton("Browse")
         browseWorkDirectory.clicked.connect(self.mainWindow.OnOpenWorkDir)
         self.workDirHLayout = QHBoxLayout()
@@ -55,6 +57,7 @@ class DetectorDialog(QDialog):
         self.workDirHLayout.addWidget(browseWorkDirectory)
 
         self.xmlFileName = QLineEdit()
+        self.xmlFileName.setReadOnly(True)
         loadXMLFile = QPushButton("Load")
         loadXMLFile.clicked.connect(self.loadXMLFile)
         self.xmlFileHLayout = QHBoxLayout()
@@ -90,25 +93,16 @@ class DetectorDialog(QDialog):
     def loadXMLFile(self):
         self.xmlFile, self.xmlFilter = QFileDialog.getOpenFileName(parent=self.mainWindow, caption="Open XML file", filter="*.xml")
 
-        print ("Hello1")
-        print (self.xmlFile)
-        print (os.path.isfile(str(self.xmlFile)))
-
         if self.xmlFile != None and os.path.isfile(str(self.xmlFile)):
-            print ("Hello")
             InstForXrayutilsReader(self, self.xmlFile)
-
-    def createDetectorDialog(self):
-        self.detectorDialog = QDialog()
 
     def cancelDetectorDialog(self):
         self.close()
         sys.exit()
 
     def okDetectorDialog(self):
-        self.createXMLFile()
-        #self.readSpec.rawMap()
-        #self.close()
+        self.readSpec.rawMap()
+        self.accept()
 
     def sampleCircleInit(self):
 
@@ -489,7 +483,7 @@ class DetectorDialog(QDialog):
 
     def getDetectorPixelWidth(self):
         """Returns the width of the detector by dividing the size with the pixels
-        :return:
+        :return: array of width
         """
         p1 = float(self.nPixelsLnEdit1.text())
         p2 = float(self.nPixelsLnEdit2.text())
@@ -502,83 +496,94 @@ class DetectorDialog(QDialog):
         return [s, f]
 
     def getDistanceToDetector(self):
+        """Gets the distance from the detector dialog
+        :return: distance
+        """
         return float(self.distanceLnEdit.text())
 
     def createXMLFile(self):
-        """Creates an xml file from the date input to the detector dialog.
+        """Creates an xml file from the data inputted in the detector dialog.
         """
-        dataForXrayutils = ET.Element("dataForXrayutils",
-                                attrib={'xmlns':"https://subversion.xray.aps.anl.gov/RSM/dataForXrayutils"})
+        try:
+            file, filter = QFileDialog.getSaveFileName(parent=self.mainWindow, caption="Save XML file", filter="*.xml")
+            svFile = str(file) + ".xml"
+            dataForXrayutils = ET.Element("dataForXrayutils",
+                                    attrib={'xmlns':"https://subversion.xray.aps.anl.gov/RSM/dataForXrayutils"})
 
-        #  Instrument xml tag
-        instForXrayutils = ET.SubElement(dataForXrayutils, "instForXrayutils")
-        sampleCircles = ET.SubElement(instForXrayutils, "sampleCircles",
-                                           attrib={"numCircles": str(len(self.sampleCircleList))})
-        detectorCircles = ET.SubElement(instForXrayutils, "detectorCircles",
-                                           attrib={"numCircles": str(len(self.detectorCircleList))})
-        primaryBeamDirection = ET.SubElement(instForXrayutils, "primaryBeamDirection")
-        inplaneReferenceDirection = ET.SubElement(instForXrayutils, "inplaneReferenceDirection")
-        sampleSurfaceNormalDirection = ET.SubElement(instForXrayutils, "sampleSurfaceNormalDirection")
-        projectionDirection = ET.SubElement(instForXrayutils, "projectionDirection")
+            #  Instrument xml tag
+            instForXrayutils = ET.SubElement(dataForXrayutils, "instForXrayutils")
+            sampleCircles = ET.SubElement(instForXrayutils, "sampleCircles",
+                                               attrib={"numCircles": str(len(self.sampleCircleList))})
+            detectorCircles = ET.SubElement(instForXrayutils, "detectorCircles",
+                                               attrib={"numCircles": str(len(self.detectorCircleList))})
+            primaryBeamDirection = ET.SubElement(instForXrayutils, "primaryBeamDirection")
+            inplaneReferenceDirection = ET.SubElement(instForXrayutils, "inplaneReferenceDirection")
+            sampleSurfaceNormalDirection = ET.SubElement(instForXrayutils, "sampleSurfaceNormalDirection")
+            projectionDirection = ET.SubElement(instForXrayutils, "projectionDirection")
 
-        for i in xrange(len(self.sampleCircleList)):
-            ET.SubElement(sampleCircles, "circleAxis",
-                          attrib={"number": str(i+1),
-                                  "specMotorName": str(self.sampleCircleMotorList[i].itemText(
-                                      self.sampleCircleMotorList[i].currentIndex())),
-                                  "directionAxis": str(self.sampleCircleDirectionList[i].itemText(
-                                      self.sampleCircleDirectionList[i].currentIndex()))})
+            for i in xrange(len(self.sampleCircleList)):
+                ET.SubElement(sampleCircles, "circleAxis",
+                              attrib={"number": str(i+1),
+                                      "specMotorName": str(self.sampleCircleMotorList[i].itemText(
+                                          self.sampleCircleMotorList[i].currentIndex())),
+                                      "directionAxis": str(self.sampleCircleDirectionList[i].itemText(
+                                          self.sampleCircleDirectionList[i].currentIndex()))})
 
-        for i in xrange(len(self.detectorCircleList)):
-            ET.SubElement(detectorCircles, "circleAxis",
-                          attrib={"number": str(i + 1),
-                                  "specMotorName": str(self.detectorCircleMotorList[i].itemText(
-                                      self.detectorCircleMotorList[i].currentIndex())),
-                                  "directionAxis": str(self.detectorCircleDirectionList[i].itemText(
-                                      self.detectorCircleDirectionList[i].currentIndex()))})
-        pbdirection = self.getDirectionCoordinates(
-            self.primaryBeamDirBox.itemText(self.primaryBeamDirBox.currentIndex()))
-        irdirection = self.getDirectionCoordinates(
-            self.inplaneRefDirBox.itemText(self.inplaneRefDirBox.currentIndex()))
-        ssndirection = self.getDirectionCoordinates(
-            self.sampleSurfaceNormalDirBox.itemText(self.sampleSurfaceNormalDirBox.currentIndex()))
-        pdirection = self.getDirectionCoordinates(
-            self.projectionDirBox.itemText(self.projectionDirBox.currentIndex()))
+            for i in xrange(len(self.detectorCircleList)):
+                ET.SubElement(detectorCircles, "circleAxis",
+                              attrib={"number": str(i + 1),
+                                      "specMotorName": str(self.detectorCircleMotorList[i].itemText(
+                                          self.detectorCircleMotorList[i].currentIndex())),
+                                      "directionAxis": str(self.detectorCircleDirectionList[i].itemText(
+                                          self.detectorCircleDirectionList[i].currentIndex()))})
+            pbdirection = self.getDirectionCoordinates(
+                self.primaryBeamDirBox.itemText(self.primaryBeamDirBox.currentIndex()))
+            irdirection = self.getDirectionCoordinates(
+                self.inplaneRefDirBox.itemText(self.inplaneRefDirBox.currentIndex()))
+            ssndirection = self.getDirectionCoordinates(
+                self.sampleSurfaceNormalDirBox.itemText(self.sampleSurfaceNormalDirBox.currentIndex()))
+            pdirection = self.getDirectionCoordinates(
+                self.projectionDirBox.itemText(self.projectionDirBox.currentIndex()))
 
-        for j in xrange(3):
-            ET.SubElement(primaryBeamDirection, "axis",
-                          attrib={"number": str(j + 1)}).text = str(pbdirection[j])
+            for j in xrange(3):
+                ET.SubElement(primaryBeamDirection, "axis",
+                              attrib={"number": str(j + 1)}).text = str(pbdirection[j])
 
-            ET.SubElement(inplaneReferenceDirection, "axis",
-                          attrib={"number": str(j + 1)}).text = str(irdirection[j])
+                ET.SubElement(inplaneReferenceDirection, "axis",
+                              attrib={"number": str(j + 1)}).text = str(irdirection[j])
 
-            ET.SubElement(sampleSurfaceNormalDirection, "axis",
-                          attrib={"number": str(j + 1)}).text = str(ssndirection[j])
+                ET.SubElement(sampleSurfaceNormalDirection, "axis",
+                              attrib={"number": str(j + 1)}).text = str(ssndirection[j])
 
-            ET.SubElement(projectionDirection, "axis",
-                          attrib={"number": str(j + 1)}).text = str(pdirection[j])
+                ET.SubElement(projectionDirection, "axis",
+                              attrib={"number": str(j + 1)}).text = str(pdirection[j])
 
-        #  Detector xml tag
-        detectorGeometryForXrayutils = ET.SubElement(dataForXrayutils, "detectorGeometryForXrayutils")
-        detector = ET.SubElement(detectorGeometryForXrayutils, "Detector")
+            #  Detector xml tag
+            detectorGeometryForXrayutils = ET.SubElement(dataForXrayutils, "detectorGeometryForXrayutils")
+            detector = ET.SubElement(detectorGeometryForXrayutils, "Detector")
 
-        ET.SubElement(detector, "pixelDirection1").text = \
-            self.pixelDirectionBox1.itemText(self.pixelDirectionBox1.currentIndex())
-        ET.SubElement(detector, "pixelDirection2").text = \
-            self.pixelDirectionBox1.itemText(self.pixelDirectionBox2.currentIndex())
-        ET.SubElement(detector, "centerChannelPixel").text = (self.centerChannelLnEdit1.text() + " " +
-                                                              self.centerChannelLnEdit2.text())
-        ET.SubElement(detector, "Npixels").text = (self.nPixelsLnEdit1.text() + " " + self.nPixelsLnEdit2.text())
-        ET.SubElement(detector, "size", attrib={"unit": "mm"}).text = (self.detectorSizeLnEdit1.text() + " " +
-                                                                       self.detectorSizeLnEdit2.text())
-        ET.SubElement(detector, "distance", attrib={"unit": "mm"}).text = self.distanceLnEdit.text()
-        ET.SubElement(detector, "ID").text = self.detectorIDBox.itemText(self.detectorIDBox.currentIndex())
-        ET.SubElement(detector, "notes").text = " "
+            ET.SubElement(detector, "pixelDirection1").text = \
+                self.pixelDirectionBox1.itemText(self.pixelDirectionBox1.currentIndex())
+            ET.SubElement(detector, "pixelDirection2").text = \
+                self.pixelDirectionBox1.itemText(self.pixelDirectionBox2.currentIndex())
+            ET.SubElement(detector, "centerChannelPixel").text = (self.centerChannelLnEdit1.text() + " " +
+                                                                  self.centerChannelLnEdit2.text())
+            ET.SubElement(detector, "Npixels").text = (self.nPixelsLnEdit1.text() + " " + self.nPixelsLnEdit2.text())
+            ET.SubElement(detector, "size", attrib={"unit": "mm"}).text = (self.detectorSizeLnEdit1.text() + " " +
+                                                                           self.detectorSizeLnEdit2.text())
+            ET.SubElement(detector, "distance", attrib={"unit": "mm"}).text = self.distanceLnEdit.text()
+            ET.SubElement(detector, "ID").text = self.detectorIDBox.itemText(self.detectorIDBox.currentIndex())
+            ET.SubElement(detector, "notes").text = " "
 
 
 
-        tree = ET.ElementTree(dataForXrayutils)
-        tree.write("filename.xml", xml_declaration=True, encoding="UTF-8", method="xml")
+            tree = ET.ElementTree(dataForXrayutils)
+            tree.write(svFile, xml_declaration=True, encoding="UTF-8", method="xml")
+        except Exception as e:
+            QMessageBox.warning(self.detectorDialog,
+                                "Error",
+                                "There was an error creating the XML file. \n\nException: " + e)
+
 
 
 
